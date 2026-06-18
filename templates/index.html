@@ -1,0 +1,717 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Loop 1 — Sprint Goals</title>
+<link rel="icon" type="image/png" href="/static/agilow-a.png" />
+<style>
+  :root {
+    --navy: #16245C; --navy-soft: #243169; --navy-100: #EEF1F8;
+    --orange: #F15A29; --orange-soft: #FDECE4;
+    --bg: #F6F7FB; --surface: #FFFFFF; --line: #E6E9F2;
+    --ink: #1B2235; --muted: #6B7280;
+    --good: #15935E; --bad: #DC4B5F;
+    --radius: 12px;
+    --shadow: 0 1px 3px rgba(20,30,60,.08), 0 8px 24px rgba(20,30,60,.05);
+  }
+  * { box-sizing: border-box; }
+  html, body { margin: 0; }
+  body {
+    background: var(--bg); color: var(--ink);
+    font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    -webkit-font-smoothing: antialiased;
+  }
+
+  /* Top app bar */
+  .topbar {
+    position: sticky; top: 0; z-index: 20;
+    display: flex; align-items: center; gap: 12px;
+    background: var(--navy); color: #fff;
+    padding: 12px 24px; box-shadow: 0 1px 0 rgba(0,0,0,.15);
+  }
+  .brand { display: flex; align-items: center; gap: 10px; }
+  .brand .logo { display: block; width: 30px; height: 30px; object-fit: contain; }
+  .brand .word { font-weight: 700; font-size: 17px; letter-spacing: .2px; }
+  .topbar .sub { color: #aeb6d6; font-size: 13px;
+    border-left: 1px solid rgba(255,255,255,.18); padding-left: 12px; margin-left: 2px; }
+
+  main { max-width: 880px; margin: 0 auto; padding: 28px 24px 64px; }
+
+  .card-surface {
+    background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+  }
+  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase;
+    letter-spacing: .6px; color: var(--muted); margin: 0 0 8px; }
+
+  textarea, .field input {
+    width: 100%; background: #fff; color: var(--ink);
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
+    font-family: inherit; font-size: 14px; transition: border-color .15s, box-shadow .15s;
+  }
+  textarea { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
+  textarea:focus, .field input:focus {
+    outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft);
+  }
+  #transcript { min-height: 200px; }
+
+  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .field input { min-width: 240px; }
+
+  /* Buttons */
+  button {
+    background: var(--orange); color: #fff; border: none; border-radius: 9px;
+    padding: 11px 18px; font-weight: 600; font-size: 14px; cursor: pointer;
+    transition: filter .15s, transform .05s, box-shadow .15s;
+  }
+  button:hover { filter: brightness(1.05); }
+  button:active { transform: translateY(1px); }
+  button:disabled { opacity: .55; cursor: default; filter: none; }
+  button.secondary { background: #fff; color: var(--navy); border: 1px solid var(--line); }
+  button.secondary:hover { border-color: var(--navy); filter: none; }
+
+  details { margin-top: 14px; }
+  summary { cursor: pointer; color: var(--navy); font-size: 13px; font-weight: 600; }
+  summary::marker { color: var(--muted); }
+  .note { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--good); font-weight: 600; }
+
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px;
+    border-radius: 999px; background: var(--navy-100); color: var(--navy); margin-left: 6px; }
+  .pill.alt { background: var(--orange-soft); color: #b8431d; }
+
+  #summary { margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--orange);
+    background: var(--orange-soft); color: #5a3320; border-radius: 8px; font-size: 13.5px; }
+  #summary:empty { display: none; }
+  #process { margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--navy);
+    background: var(--navy-100); color: var(--navy); border-radius: 8px; font-size: 13.5px;
+    font-weight: 600; }
+  #process:empty { display: none; }
+  #error { color: var(--bad); margin-top: 12px; white-space: pre-wrap; font-size: 13.5px; }
+  #error:empty { display: none; }
+
+  /* Per-person cards */
+  #sections { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
+  .card {
+    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 18px; transition: box-shadow .15s, opacity .15s;
+  }
+  .card:hover { box-shadow: 0 2px 6px rgba(20,30,60,.10), 0 12px 32px rgba(20,30,60,.07); }
+  .card.rejected { opacity: .5; border-color: var(--bad); }
+  .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
+  .card-head .name { font-weight: 700; font-size: 16px; color: var(--navy); }
+  .card-head .controls { display: flex; gap: 6px; }
+  .toggle { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
+    border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer;
+    transition: all .12s; }
+  .toggle:hover { border-color: var(--muted); filter: none; }
+  .toggle.active-approve { background: var(--good); color: #fff; border-color: var(--good); }
+  .toggle.active-reject { background: var(--bad); color: #fff; border-color: var(--bad); }
+  .status-tag { font-size: 11px; font-weight: 600; color: var(--orange); margin-left: 8px; }
+  .card textarea { min-height: 60px; margin-top: 12px; overflow: hidden; resize: none;
+    font-size: 13.5px; line-height: 1.7; background: #FCFCFE; }
+  .reason-input { width: 100%; margin-top: 8px; padding: 8px 12px; font-size: 13px;
+    color: var(--ink); background: #fff; border: 1px dashed var(--line);
+    border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
+  .reason-input::placeholder { color: var(--muted); }
+  .reason-input:focus { outline: none; border-style: solid; border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-soft); }
+
+  #actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+
+  /* Learned panel */
+  .panel { margin-top: 22px; background: var(--surface); border: 1px solid var(--line);
+    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
+  .panel h3 { margin: 0 0 12px; font-size: 15px; color: var(--navy);
+    display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
+  #rules { display: flex; flex-direction: column; gap: 7px; }
+  .rule-row { display: flex; align-items: flex-start; justify-content: space-between;
+    gap: 10px; background: var(--navy-100); border: 1px solid var(--line);
+    border-radius: 9px; padding: 9px 12px; font-size: 13.5px; color: var(--ink); }
+  .rule-del { background: transparent; color: var(--muted); border: none;
+    cursor: pointer; font-size: 13px; padding: 0 4px; flex: 0 0 auto; line-height: 1.4; }
+  .rule-del:hover { color: var(--bad); filter: none; }
+  .who { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px;
+    border-radius: 999px; background: var(--orange-soft); color: #b8431d; margin-right: 7px; }
+  #connBody { display: flex; flex-direction: column; gap: 12px; }
+  .conn-actions { display: flex; gap: 8px; flex-wrap: wrap; }
+  .conn-group h4 { margin: 0 0 5px; font-size: 13px; color: var(--navy); }
+  .conn-list { margin: 0; padding: 0; list-style: none; display: flex;
+    flex-direction: column; gap: 4px; }
+  .conn-list li { font-size: 12.5px; color: var(--ink); background: var(--navy-100);
+    border-radius: 7px; padding: 6px 10px; }
+  .conn-empty { color: var(--muted); font-size: 12.5px; }
+  .conn-select { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
+    border-radius: 8px; font-size: 13px; background: #fff; color: var(--ink); }
+  .conn-select:focus { outline: none; border-color: var(--orange);
+    box-shadow: 0 0 0 3px var(--orange-soft); }
+  .conn-group select + .reason-input { margin-top: 6px; }
+
+  /* Spinner (sits inside the orange primary button) */
+  .spinner { display: inline-block; width: 14px; height: 14px;
+    border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%;
+    animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 7px; }
+  @keyframes spin { to { transform: rotate(360deg); } }
+</style>
+</head>
+<body>
+<header class="topbar">
+  <div class="brand">
+    <img src="/static/agilow-a.png" alt="Agilow" class="logo" />
+    <span class="word">Agilow</span>
+  </div>
+  <span class="sub">Loop 1 · Sprint Goals</span>
+</header>
+
+<main>
+  <div class="card-surface">
+    <div class="row" style="margin-top:0; justify-content:space-between">
+      <p class="section-label" style="margin:0">Input</p>
+      <select id="inputMode" class="conn-select" style="width:auto">
+        <option value="transcript">Raw Granola transcript</option>
+        <option value="draft">Granola sprint-goals draft (layer on top)</option>
+      </select>
+    </div>
+    <textarea id="transcript" placeholder="Paste your Granola transcript here…"></textarea>
+
+    <div class="row">
+      <button id="generateBtn">Generate sprint goals</button>
+      <span id="appliedNote" class="note"></span>
+    </div>
+
+    <details>
+      <summary>Settings</summary>
+      <div class="row">
+        <div class="field">
+          <label for="sprintLabel">Sprint label</label>
+          <input id="sprintLabel" value="Current Sprint" />
+        </div>
+        <div class="field">
+          <label for="team">Team (comma-separated)</label>
+          <input id="team" value="{{ default_team }}" />
+        </div>
+      </div>
+    </details>
+  </div>
+
+  <div class="panel">
+    <h3>Live data connections (Google) <span id="connStatus" class="pill">…</span></h3>
+    <div id="connBody">Loading…</div>
+  </div>
+
+  <div id="error"></div>
+  <div id="process"></div>
+  <div id="summary"></div>
+  <div id="sections"></div>
+
+  <div id="actions" style="display:none">
+    <button id="learnBtn">Approve &amp; Learn</button>
+    <button id="copyBtn" class="secondary">Copy final .md</button>
+    <button id="downloadBtn" class="secondary">Download .md</button>
+  </div>
+
+  <div class="panel">
+    <h3>What it has learned
+      <span id="learnedCount" class="pill">…</span>
+      <span id="exampleCount" class="pill alt">…</span>
+    </h3>
+    <div id="rules">Loading…</div>
+  </div>
+</main>
+
+<script>
+const $ = (id) => document.getElementById(id);
+let lastMeetingSummary = "";
+
+// Grow a textarea to fit all its content so the whole section is visible.
+function autosize(ta) {
+  ta.style.height = "auto";
+  ta.style.height = (ta.scrollHeight + 4) + "px";
+}
+
+function setBusy(btn, busy, label) {
+  btn.disabled = busy;
+  btn.innerHTML = busy ? `<span class="spinner"></span>${label}` : label;
+}
+
+function renderRules(rules, exampleCount) {
+  rules = rules || [];
+  $("learnedCount").textContent = rules.length + " rule" + (rules.length === 1 ? "" : "s");
+  $("exampleCount").textContent = (exampleCount || 0) + " example" + (exampleCount === 1 ? "" : "s");
+  const box = $("rules");
+  box.innerHTML = "";
+  if (!rules.length) {
+    box.innerHTML = '<p class="note">Nothing learned yet — edit or reject a section, then Approve &amp; Learn.</p>';
+    return;
+  }
+  rules.forEach((rule) => {
+    const row = document.createElement("div");
+    row.className = "rule-row";
+    const span = document.createElement("span");
+    if (rule.person) {
+      const chip = document.createElement("span");
+      chip.className = "who";
+      chip.textContent = rule.person;
+      span.appendChild(chip);
+    }
+    span.appendChild(document.createTextNode(rule.text));
+    const del = document.createElement("button");
+    del.className = "rule-del";
+    del.textContent = "✕";
+    del.title = "Delete this rule";
+    del.addEventListener("click", () => deleteRule(rule.id));
+    row.append(span, del);
+    box.appendChild(row);
+  });
+}
+
+async function loadLessons() {
+  try {
+    const r = await fetch("/api/lessons");
+    const d = await r.json();
+    renderRules(d.rules, d.example_count);
+  } catch (e) {
+    $("rules").textContent = "Could not load lessons.";
+  }
+}
+
+async function deleteRule(id) {
+  try {
+    const r = await fetch("/api/lessons/delete", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ id }),
+    });
+    const d = await r.json();
+    if (r.ok) renderRules(d.rules, d.example_count);
+  } catch (e) {
+    $("error").textContent = "Could not delete rule.";
+  }
+}
+
+function makeCard(section) {
+  const card = document.createElement("div");
+  card.className = "card";
+  card.dataset.name = section.name;
+  card.dataset.original = section.text;
+  card.dataset.status = "approved";
+
+  const head = document.createElement("div");
+  head.className = "card-head";
+  const name = document.createElement("div");
+  name.className = "name";
+  name.textContent = section.name;
+  const tag = document.createElement("span");
+  tag.className = "status-tag";
+  name.appendChild(tag);
+
+  const controls = document.createElement("div");
+  controls.className = "controls";
+  const approveBtn = document.createElement("button");
+  approveBtn.className = "toggle active-approve";
+  approveBtn.textContent = "Approve";
+  const rejectBtn = document.createElement("button");
+  rejectBtn.className = "toggle";
+  rejectBtn.textContent = "Reject";
+  controls.append(approveBtn, rejectBtn);
+  head.append(name, controls);
+
+  const ta = document.createElement("textarea");
+  ta.value = section.text;
+
+  // Optional "why" — only shown once a section is edited or rejected. A reason
+  // lets a sizing/ownership change become a general rule; without one, the edit
+  // is kept as a one-off example instead of an invented rule.
+  const reason = document.createElement("input");
+  reason.type = "text";
+  reason.className = "reason-input";
+  reason.placeholder = "Why this change? (optional — turns it into a rule it can reuse)";
+  reason.style.display = "none";
+
+  function refreshStatus() {
+    if (card.dataset.status === "rejected") {
+      tag.textContent = "rejected"; reason.style.display = ""; return;
+    }
+    const edited = ta.value.trim() !== card.dataset.original.trim();
+    card.dataset.status = edited ? "edited" : "approved";
+    tag.textContent = edited ? "edited" : "";
+    reason.style.display = edited ? "" : "none";
+  }
+  ta.addEventListener("input", () => { refreshStatus(); autosize(ta); });
+
+  approveBtn.addEventListener("click", () => {
+    card.classList.remove("rejected");
+    approveBtn.classList.add("active-approve");
+    rejectBtn.classList.remove("active-reject");
+    ta.disabled = false;
+    refreshStatus();
+  });
+  rejectBtn.addEventListener("click", () => {
+    card.classList.add("rejected");
+    rejectBtn.classList.add("active-reject");
+    approveBtn.classList.remove("active-approve");
+    card.dataset.status = "rejected";
+    tag.textContent = "rejected";
+    reason.style.display = "";
+  });
+
+  card.append(head, ta, reason);
+  return card;
+}
+
+function collectItems() {
+  return [...document.querySelectorAll(".card")].map((c) => ({
+    name: c.dataset.name,
+    original: c.dataset.original,
+    final: c.querySelector("textarea").value,
+    status: c.dataset.status,
+    reason: (c.querySelector(".reason-input") || {}).value
+      ? c.querySelector(".reason-input").value.trim() : "",
+  }));
+}
+
+function buildFinalDoc() {
+  const header = $("sections").dataset.header || "";
+  const parts = [...document.querySelectorAll(".card")]
+    .filter((c) => c.dataset.status !== "rejected")
+    .map((c) => c.querySelector("textarea").value.trim());
+  return header + "\n\n" + parts.join("\n\n---\n\n") + "\n";
+}
+
+async function generate() {
+  $("error").textContent = "";
+  const transcript = $("transcript").value.trim();
+  if (!transcript) { $("error").textContent = "Paste a transcript first."; return; }
+  setBusy($("generateBtn"), true, "Generating…");
+  $("sections").innerHTML = "";
+  $("actions").style.display = "none";
+  $("summary").textContent = "";
+  $("process").textContent = "";
+  try {
+    const r = await fetch("/api/generate", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        transcript,
+        input_mode: $("inputMode").value,
+        sprint_label: $("sprintLabel").value,
+        team: $("team").value,
+      }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Generation failed.");
+    lastMeetingSummary = d.meeting_summary || "";
+    $("summary").textContent = d.meeting_summary || "";
+    $("process").textContent = d.process_improvement
+      ? "Process improvement (team): " + d.process_improvement : "";
+    $("sections").dataset.header = d.header || "";
+    const note = [];
+    if (d.context_applied) note.push("project context applied");
+    if (d.lessons_applied) note.push("learned corrections applied");
+    if (d.examples_applied) note.push(`${d.examples_applied} past example${d.examples_applied === 1 ? "" : "s"} applied`);
+    $("appliedNote").textContent = note.length ? "✓ " + note.join(" · ") : "";
+    if (!d.sections.length) {
+      $("sections").innerHTML = '<p class="note">No people with goals were extracted from this transcript.</p>';
+    } else {
+      d.sections.forEach((s) => $("sections").appendChild(makeCard(s)));
+      document.querySelectorAll(".card textarea").forEach(autosize);
+      $("actions").style.display = "flex";
+    }
+  } catch (e) {
+    $("error").textContent = e.message;
+  } finally {
+    setBusy($("generateBtn"), false, "Generate sprint goals");
+  }
+}
+
+async function learn() {
+  $("error").textContent = "";
+  setBusy($("learnBtn"), true, "Learning…");
+  try {
+    const r = await fetch("/api/feedback", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ items: collectItems(), meeting_summary: lastMeetingSummary }),
+    });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Feedback failed.");
+    renderRules(d.rules, d.example_count);
+    const n = (d.added_rules || []).length;
+    const ex = d.new_examples || 0;
+    if (n) {
+      const bits = [`${n} general rule${n === 1 ? "" : "s"}`];
+      if (ex) bits.push(`${ex} example${ex === 1 ? "" : "s"}`);
+      $("appliedNote").innerHTML =
+        `<span class="ok">✓ Learned ${bits.join(" + ")}</span> <span class="note">— applied next generate.</span>`;
+    } else if (ex) {
+      $("appliedNote").innerHTML =
+        `<span class="ok">✓ Saved ${ex} one-off example${ex === 1 ? "" : "s"}</span> ` +
+        `<span class="note">— no general rule from these (add a “why” on an edit to teach one).</span>`;
+    } else {
+      $("appliedNote").innerHTML = `<span class="note">No edits or rejections to learn from.</span>`;
+    }
+  } catch (e) {
+    $("error").textContent = e.message;
+  } finally {
+    setBusy($("learnBtn"), false, "Approve & Learn");
+  }
+}
+
+function copyFinal() {
+  navigator.clipboard.writeText(buildFinalDoc()).then(() => {
+    $("copyBtn").textContent = "Copied ✓";
+    setTimeout(() => ($("copyBtn").textContent = "Copy final .md"), 1500);
+  });
+}
+
+function downloadFinal() {
+  const blob = new Blob([buildFinalDoc()], { type: "text/markdown" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = "sprint_goals.md";
+  a.click();
+  URL.revokeObjectURL(a.href);
+}
+
+// ----- Live data connections (Google) -----
+function connGroup(title, items, render) {
+  const wrap = document.createElement("div");
+  wrap.className = "conn-group";
+  const h = document.createElement("h4");
+  h.textContent = `${title} (${items.length})`;
+  wrap.appendChild(h);
+  if (!items.length) {
+    const e = document.createElement("div");
+    e.className = "conn-empty";
+    e.textContent = "— nothing pulled —";
+    wrap.appendChild(e);
+  } else {
+    const ul = document.createElement("ul");
+    ul.className = "conn-list";
+    items.slice(0, 8).forEach((it) => {
+      const li = document.createElement("li");
+      li.textContent = render(it);
+      ul.appendChild(li);
+    });
+    wrap.appendChild(ul);
+  }
+  return wrap;
+}
+
+function calendarControl(team, status) {
+  const wrap = document.createElement("div");
+  wrap.className = "conn-group";
+  const h = document.createElement("h4");
+  h.textContent = "Calendars read (you + teammates)";
+  wrap.appendChild(h);
+  (status || []).forEach((s) => {
+    const line = document.createElement("div");
+    line.className = "conn-empty";
+    line.style.color = s.ok ? "var(--good)" : "var(--bad)";
+    line.textContent = s.ok ? `✓ ${s.calendar} (${s.count})`
+                            : `✕ ${s.calendar} — ${s.error}`;
+    wrap.appendChild(line);
+  });
+  const input = document.createElement("input");
+  input.className = "reason-input";
+  input.style.marginTop = "6px";
+  input.placeholder = "comma-separated emails";
+  input.value = (team || []).join(", ");
+  const save = document.createElement("button");
+  save.textContent = "Save calendars";
+  save.addEventListener("click", async () => {
+    save.disabled = true; save.textContent = "Saving…";
+    try {
+      await fetch("/api/connectors/calendars", { method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ emails: input.value }) });
+    } catch (e) { /* ignore */ }
+    loadConnectors();
+  });
+  const hint = document.createElement("p");
+  hint.className = "note";
+  hint.style.margin = "0";
+  hint.textContent = "Teammates load if their calendar is shared with you or visible org-wide.";
+  wrap.append(input, save, hint);
+  return wrap;
+}
+
+function driveSelector(d, drives, selected) {
+  const wrap = document.createElement("div");
+  wrap.className = "conn-group";
+  const h = document.createElement("h4");
+  h.textContent = "Drive source";
+  wrap.appendChild(h);
+
+  const sel = document.createElement("select");
+  sel.className = "conn-select";
+  const optRecent = document.createElement("option");
+  optRecent.value = "recent";
+  optRecent.textContent = "My Drive (recent files)";
+  sel.appendChild(optRecent);
+  (drives || []).forEach((dr) => {
+    const o = document.createElement("option");
+    o.value = "drive:" + dr.id;
+    o.textContent = "Shared Drive: " + dr.name;
+    sel.appendChild(o);
+  });
+  if (selected && selected.mode === "drive" && selected.id) sel.value = "drive:" + selected.id;
+
+  const folder = document.createElement("input");
+  folder.className = "reason-input";
+  folder.style.marginTop = "0";
+  folder.placeholder = "…or paste a Drive folder link / ID (e.g. Agilow's shared folder)";
+
+  const apply = document.createElement("button");
+  apply.textContent = "Use this Drive";
+  apply.addEventListener("click", async () => {
+    let body;
+    if (folder.value.trim()) body = { mode: "folder", id: folder.value.trim(), name: "Folder" };
+    else if (sel.value.startsWith("drive:"))
+      body = { mode: "drive", id: sel.value.slice(6),
+               name: sel.options[sel.selectedIndex].text.replace("Shared Drive: ", "") };
+    else body = { mode: "recent" };
+    apply.disabled = true; apply.textContent = "Applying…";
+    try {
+      await fetch("/api/connectors/drive-source", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify(body) });
+    } catch (e) { /* ignore */ }
+    loadConnectors();
+  });
+
+  const hint = document.createElement("p");
+  hint.className = "note";
+  hint.style.margin = "0";
+  hint.textContent = (drives && drives.length)
+    ? "Pick Agilow's Shared Drive, or paste a shared folder link, then Sync."
+    : "No Shared Drives found — paste Agilow's shared folder link instead, then Sync.";
+
+  wrap.append(sel, folder, apply, hint);
+  return wrap;
+}
+
+function renderConnectors(d, drives, selected) {
+  const status = $("connStatus");
+  const body = $("connBody");
+  body.innerHTML = "";
+  if (!d.available) {
+    status.textContent = "unavailable";
+    body.innerHTML = '<p class="note">Google libraries not installed on the server.</p>';
+    return;
+  }
+  if (!d.connected) {
+    status.textContent = "not connected";
+    const btn = document.createElement("button");
+    btn.textContent = "Connect Google (Calendar · Gmail · Drive)";
+    btn.addEventListener("click", connectGoogle);
+    body.appendChild(btn);
+    const note = document.createElement("p");
+    note.className = "note";
+    note.style.marginTop = "8px";
+    note.textContent = "Opens a Google consent screen in your browser. Read-only access.";
+    body.appendChild(note);
+    if (d.error) {
+      const er = document.createElement("p");
+      er.style.cssText = "color:var(--bad);font-size:13px";
+      er.textContent = d.error;
+      body.appendChild(er);
+    }
+    return;
+  }
+  status.textContent = "connected";
+  const actions = document.createElement("div");
+  actions.className = "conn-actions";
+  const sync = document.createElement("button");
+  sync.textContent = "Sync to context";
+  sync.addEventListener("click", syncConnectors);
+  const disc = document.createElement("button");
+  disc.className = "secondary";
+  disc.textContent = "Disconnect";
+  disc.addEventListener("click", disconnectGoogle);
+  actions.append(sync, disc);
+  body.appendChild(actions);
+  const note = document.createElement("p");
+  note.className = "note";
+  note.style.margin = "0";
+  note.textContent = 'This is the live data being pulled. "Sync to context" feeds it into the next Generate.';
+  body.appendChild(note);
+  body.appendChild(connGroup("Calendar — next 7 days (team)", d.calendar || [],
+    (e) => `[${e.who || "?"}] ${(e.start || "").slice(0, 16).replace("T", " ")} · ${e.summary}`));
+  body.appendChild(calendarControl(d.team_calendars || [], d.calendars || []));
+  body.appendChild(connGroup("Gmail — recent inbox", d.gmail || [],
+    (m) => `${m.subject}  —  ${m.from}`));
+  const dlabel = (selected && selected.name) ? selected.name : "My Drive (recent)";
+  body.appendChild(connGroup("Drive — " + dlabel, d.drive || [], (f) => f.name));
+  body.appendChild(driveSelector(d, drives, selected));
+}
+
+async function loadConnectors() {
+  try {
+    const d = await (await fetch("/api/connectors")).json();
+    let drives = [], selected = d.drive_source || null;
+    if (d.connected) {
+      try {
+        const dr = await (await fetch("/api/connectors/drives")).json();
+        drives = dr.drives || [];
+        selected = dr.selected || selected;
+      } catch (e) { /* ignore */ }
+    }
+    renderConnectors(d, drives, selected);
+  } catch (e) {
+    $("connBody").textContent = "Could not load connectors.";
+  }
+}
+
+async function connectGoogle() {
+  $("connStatus").textContent = "connecting… (check your browser)";
+  $("connBody").innerHTML =
+    '<p class="note">A Google sign-in should open in your browser — approve access, then this updates.</p>';
+  try {
+    const r = await fetch("/api/connectors/connect", { method: "POST" });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Connect failed");
+    loadConnectors();
+  } catch (e) {
+    renderConnectors({ available: true, connected: false, error: e.message,
+      calendar: [], gmail: [], drive: [] }, [], null);
+  }
+}
+
+async function syncConnectors() {
+  try {
+    const r = await fetch("/api/connectors/sync", { method: "POST" });
+    const d = await r.json();
+    if (!r.ok) throw new Error(d.error || "Sync failed");
+    const w = d.written || {};
+    $("connStatus").textContent =
+      `synced ✓ (cal ${w.calendar || 0} · mail ${w.gmail || 0} · drive ${w.drive || 0})`;
+  } catch (e) {
+    $("error").textContent = e.message;
+  }
+}
+
+async function disconnectGoogle() {
+  try {
+    const r = await fetch("/api/connectors/disconnect", { method: "POST" });
+    renderConnectors(await r.json());
+  } catch (e) { /* ignore */ }
+}
+
+$("inputMode").addEventListener("change", (e) => {
+  $("transcript").placeholder = e.target.value === "draft"
+    ? "Paste the Granola sprint-goals draft here — we'll add North Star / calendar / carry-over goals + your learned fixes on top…"
+    : "Paste your Granola transcript here…";
+});
+
+$("generateBtn").addEventListener("click", generate);
+$("learnBtn").addEventListener("click", learn);
+$("copyBtn").addEventListener("click", copyFinal);
+$("downloadBtn").addEventListener("click", downloadFinal);
+loadLessons();
+loadConnectors();
+</script>
+</body>
+</html>

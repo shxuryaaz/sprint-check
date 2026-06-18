@@ -1,0 +1,35 @@
+# --- Secrets (NEVER commit) ---
+credentials.json
+token.json
+.env
+
+# --- Private runtime data ---
+memory/
+runs/
+drive_source.json
+team_calendars.json
+server.log
+context/project_context.md
+context/sources/*
+!context/sources/README.md
+
+# --- Transcripts & generated outputs (private) ---
+*.txt
+!requirements.txt
+sprint_goals_*.md
+team*.json
+
+# --- Local docs (contain internal/business specifics) ---
+docs/
+
+# --- Logs (may contain debug output / transcript-derived content) ---
+*.log
+
+# --- Local tooling / OS cruft ---
+.claude/
+.DS_Store
+
+# --- Python ---
+.venv/
+__pycache__/
+*.pyc
