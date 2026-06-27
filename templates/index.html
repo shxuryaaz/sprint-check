@@ -1005,7 +1005,17 @@ function makeCard(section, idx) {
       card.scrollIntoView({ block: "nearest", behavior: "smooth" });
     }
   });
-  viewBar.append(editBtn, expandBtn);
+  // Per-person copy: copies just THIS person's section (formatted) so it can be
+  // pasted into that person's part of the Google Doc.
+  const copyOneBtn = document.createElement("button");
+  copyOneBtn.type = "button";
+  copyOneBtn.className = "expand-btn";
+  copyOneBtn.textContent = "Copy " + section.name;
+  copyOneBtn.title = "Copy " + section.name + "'s goals for Google Docs";
+  copyOneBtn.addEventListener("click", () =>
+    copyWithFeedback(copyOneBtn, sectionToHtml(ta.value), ta.value,
+      "Copied ✓", "Copy " + section.name));
+  viewBar.append(copyOneBtn, editBtn, expandBtn);
 
   function refreshStatus() {
     if (card.dataset.status === "rejected") { tag.textContent = "rejected"; return; }
@@ -1362,27 +1372,32 @@ async function learn() {
   finally { setBusy($("learnBtn"), false, "✓ Approve & Learn"); }
 }
 
-async function copyFinal() {
-  const btn = $("copyBtn");
-  const html = buildFinalHtml();
-  const text = buildFinalDoc();
-  const reset = (msg, ms) => { btn.textContent = msg; setTimeout(() => (btn.textContent = "Copy for Google Doc"), ms); };
-  try {
-    if (navigator.clipboard && window.ClipboardItem) {
-      // Rich + plain together: Google Docs takes the HTML (formatted), plain-text
-      // editors take the text. This is what makes the paste come out formatted.
-      await navigator.clipboard.write([new ClipboardItem({
-        "text/html": new Blob([html], { type: "text/html" }),
-        "text/plain": new Blob([text], { type: "text/plain" }),
-      })]);
-    } else {
-      legacyCopyHtml(html);   // http / older browsers — still pastes formatted
-    }
-    reset("Copied ✓ — paste into your doc", 1800);
-  } catch (e) {
-    try { legacyCopyHtml(html); reset("Copied ✓ — paste into your doc", 1800); }
-    catch (_) { reset("Copy failed — use Download", 2200); }
+// Copy rich HTML (+ plain-text) so the paste lands formatted in Google Docs.
+// Falls back to the legacy execCommand path (works over http / older browsers).
+async function copyRich(html, text) {
+  if (navigator.clipboard && window.ClipboardItem) {
+    await navigator.clipboard.write([new ClipboardItem({
+      "text/html": new Blob([html], { type: "text/html" }),
+      "text/plain": new Blob([text], { type: "text/plain" }),
+    })]);
+  } else {
+    legacyCopyHtml(html);
   }
+}
+// Run a copy and flash the button label with success/failure, then restore it.
+async function copyWithFeedback(btn, html, text, okMsg, restore) {
+  try {
+    await copyRich(html, text);
+    btn.textContent = okMsg;
+  } catch (e) {
+    try { legacyCopyHtml(html); btn.textContent = okMsg; }
+    catch (_) { btn.textContent = "Copy failed"; }
+  }
+  setTimeout(() => (btn.textContent = restore), 1600);
+}
+function copyFinal() {
+  copyWithFeedback($("copyBtn"), buildFinalHtml(), buildFinalDoc(),
+    "Copied ✓ — paste into your doc", "Copy for Google Doc");
 }
 function downloadFinal() {
   const blob = new Blob([buildFinalDoc()], { type: "text/markdown" });
