@@ -374,6 +374,45 @@
   .change-help ul { margin: 0 0 8px; padding-left: 18px; }
   .change-help li { margin: 3px 0; }
   .change-help .note { color: #7a5640; }
+
+  /* ---------- Mobile / phone layout ---------- */
+  @media (max-width: 760px) {
+    /* Sidebar becomes a sticky horizontal top bar that scrolls left/right. */
+    .app { flex-direction: column; }
+    .sidebar {
+      width: 100%; flex: none; height: auto; position: sticky; top: 0; z-index: 30;
+      flex-direction: row; align-items: center; gap: 4px;
+      padding: 8px 10px; border-right: none; border-bottom: 1px solid var(--line);
+    }
+    .brand { padding: 2px 6px; flex: 0 0 auto; }
+    .brand img { width: 22px; height: 22px; }
+    .brand .word { font-size: 16px; }
+    .nav { flex-direction: row; gap: 2px; flex: 1; overflow-x: auto; -webkit-overflow-scrolling: touch; }
+    .nav a { padding: 8px 10px; white-space: nowrap; font-size: 13px; }
+    .nav-divider, .sidebar-spacer, .workspace { display: none; }
+
+    .container { padding: 20px 14px 64px; }
+    .hero { padding-top: 6px; }
+    .hero h1 { font-size: 22px; margin: 12px 0 6px; }
+    .hero .sub { font-size: 13.5px; margin-bottom: 18px; }
+
+    /* Inputs/selects fill the width instead of a fixed 200px that overflows. */
+    .field, .field input, .field select, .conn-select { min-width: 0; width: 100%; }
+    .adv-row { flex-direction: column; gap: 12px; }
+    .composer-bar { flex-wrap: wrap; gap: 8px; }
+    .composer-bar button { flex: 1 1 auto; }
+
+    /* Button rows wrap and stay tappable. */
+    .result-head { flex-wrap: wrap; }
+    .result-actions { width: 100%; }
+    .result-actions button { flex: 1 1 auto; }
+    .view-bar { flex-wrap: wrap; gap: 10px 16px; }
+    .card { padding: 14px; }
+    .card-head { flex-wrap: wrap; }
+    .conn-actions button, .pref-add { flex-wrap: wrap; }
+
+    button { padding: 11px 14px; }   /* keep a comfortable touch target */
+  }
 </style>
 </head>
 <body>
