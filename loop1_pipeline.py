@@ -799,43 +799,79 @@ def refine_section(
     return cleaned
 
 
+def _fmt_points(p) -> str:
+    """Render a points number as an int if whole (7 not 7.0), else its decimal."""
+    try:
+        f = float(p)
+    except (TypeError, ValueError):
+        return "0"
+    return str(int(f)) if f == int(f) else str(f)
+
+
 def format_sprint_doc(
     extraction: dict, sprint_label: str, debug: bool = False
 ) -> str:
+    """Format extracted goal data into Agilow's standard sprint-goals text.
+
+    Deterministic (no LLM): the format is rigid, and an LLM formatter
+    intermittently dropped the detail fields (success criteria / dependencies /
+    risks). Building the text in code guarantees every field present in the
+    extraction JSON is printed, and removes a slow/costly API call.
     """
-    Calls the OpenAI API to format extracted goal data into Agilow's
-    standard sprint goals document text format.
+    out = [f"Sprint goals ({sprint_label})", ""]
+    pi = (extraction.get("process_improvement") or "").strip()
+    if pi:
+        out += [f"Process Improvement for the Week: {pi}", ""]
 
-    Returns the formatted document as a plain string.
-    """
-    system_prompt = _build_phase2_system_prompt()
-    # Compact JSON (no indent/whitespace) — ~30% fewer tokens than pretty-printed
-    # for the same data, with no loss of information the model needs.
-    user_message = (
-        f"SPRINT LABEL: {sprint_label}\n\n"
-        f"EXTRACTED DATA (JSON):\n{json.dumps(extraction, separators=(',', ':'))}"
-    )
-    messages = [
-        {"role": "system", "content": system_prompt},
-        {"role": "user", "content": user_message},
-    ]
+    people = extraction.get("people", []) or []
+    for idx, person in enumerate(people):
+        name = (person.get("name") or "").strip() or f"Person {idx + 1}"
+        goals = person.get("goals", []) or []
+        total = sum(float(g.get("points") or 0) for g in goals)
+        out.append(f"{name}: __ / {_fmt_points(total)}")
+        kaizen = (person.get("kaizen") or "").strip()
+        if kaizen:
+            out.append(f"Kaizen: {kaizen}")
+        out.append("")
 
-    response = _call_api(messages)
-    raw_output = response.choices[0].message.content.strip()
-    cleaned = _strip_code_fences(raw_output)
+        for gi, g in enumerate(goals):
+            pts = _fmt_points(g.get("points") or 0)
+            unit = "point" if pts == "1" else "points"
+            out.append(f"{gi + 1}. {(g.get('title') or '').strip()} ({pts} {unit})")
+            desc = (g.get("description") or "").strip()
+            if desc:
+                out.append(desc)
+            for st in (g.get("subtasks") or []):
+                if (st or "").strip():
+                    out.append(f"- {st.strip()}")
+            sc = (g.get("success_criteria") or "").strip()
+            if sc:
+                out.append(f"Success criteria: {sc}")
+            deps = [d for d in (g.get("dependencies") or [])
+                    if (d.get("description") or "").strip()]
+            if deps:
+                out.append("Dependencies:")
+                for d in deps:
+                    owner = (d.get("owner") or "").strip() or "unassigned"
+                    out.append(f"- {d['description'].strip()} (Owner: {owner})")
+            risks = [r for r in (g.get("risks") or [])
+                     if (r.get("description") or "").strip()]
+            if risks:
+                out.append("Risks:")
+                for r in risks:
+                    out.append(f"- {r['description'].strip()}")
+                    mit = (r.get("mitigation") or "").strip() or "Not yet defined"
+                    out.append(f"  Mitigation: {mit}")
+            out.append("")  # blank line after each goal
 
+        if idx != len(people) - 1:
+            out += ["---", ""]   # separator between people, not after the last
+
+    text = "\n".join(out).rstrip() + "\n"
     if debug:
-        print("--- PHASE 2 RAW OUTPUT ---", file=sys.stderr)
-        print(cleaned, file=sys.stderr)
-
-    usage = response.usage
-    print(
-        f"Phase 2 token usage: prompt={usage.prompt_tokens}, "
-        f"completion={usage.completion_tokens}",
-        file=sys.stderr,
-    )
-
-    return cleaned
+        print("--- PHASE 2 (deterministic formatter) ---", file=sys.stderr)
+        print(text, file=sys.stderr)
+    return text
 
 
 def distill_feedback(
