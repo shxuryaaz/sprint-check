@@ -1,0 +1,15 @@
+services:
+  - type: web
+    name: loop1-sprint-goals
+    runtime: python
+    plan: free
+    buildCommand: pip install -r requirements.txt
+    # Long timeout: a generate runs ~3 sequential LLM calls (tens of seconds) and
+    # would be killed by gunicorn's default 30s timeout.
+    startCommand: gunicorn wsgi:app --workers 1 --threads 4 --worker-class gthread --timeout 180 --bind 0.0.0.0:$PORT
+    healthCheckPath: /ping
+    envVars:
+      - key: OPENAI_API_KEY
+        sync: false          # set this in the Render dashboard (secret)
+      - key: PYTHON_VERSION
+        value: "3.11.9"

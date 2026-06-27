@@ -125,18 +125,36 @@ def _build_phase1_system_prompt(
 
     if context_text and context_text.strip():
         context_section = (
-            "\nPROJECT CONTEXT & LIVE SOURCES (authoritative — includes team roles, the "
-            "Journey North Star, and live data pulled from the team's calendar, email, and "
-            "Drive). Use this BOTH to enrich transcript goals AND to CREATE new goals:\n"
-            "- CREATE goals directly from these sources, attributing each to the correct owner "
-            "(use the team roles):\n"
-            "  - A calendar event this week (meeting, demo, travel, networking) -> a 'prepare for / "
-            "attend' goal for whoever owns it. Respect anyone marked unavailable.\n"
-            "  - A North Star / SOW deliverable that is due, behind, or in progress this sprint -> a "
-            "goal for its owner (Journey items belong to Shiv/Antonio only).\n"
+            "\nPROJECT CONTEXT & LIVE SOURCES (includes team roles, the Journey North Star, and "
+            "live data pulled from the team's calendar, email, and Drive). Use this to enrich the "
+            "transcript's goals AND to create goals the transcript missed — but WEIGHT the sources "
+            "in strict priority order:\n"
+            "SOURCE PRIORITY (highest -> lowest):\n"
+            "  1. CARRY-OVER — work from last sprint that wasn't finished (highest weight, when "
+            "present in the context).\n"
+            "  2. THE MEETING TRANSCRIPT — the sprint-planning discussion is where the team decides "
+            "next week's work; weight it HIGHEST of the available sources. Most goals come from here.\n"
+            "  3. CALENDAR & EMAIL this week — concrete events and commitments.\n"
+            "  4. THE NORTH STAR — LOWEST priority (weight it below the meeting and calendar). It is "
+            "the long-term goal, NOT the master task list — do not pad every person with it or pull in "
+            "items that aren't active this sprint. BUT still include the Journey deliverables that ARE "
+            "due/behind/active this sprint as goals for their owner (Shiv or Antonio) — these are their "
+            "core sprint work, so do NOT drop them. Prefer the meeting's wording when an item was "
+            "discussed there.\n"
+            "- CREATE goals from these sources, attributing each to the correct owner (use the team roles):\n"
+            "  - A calendar event this week (demo, travel, networking, external/client meeting) -> a "
+            "'prepare for / attend' goal for whoever owns it. Respect anyone marked unavailable. "
+            "EXCLUDE routine cadence ceremonies and recurring internal meetings (sprint planning, "
+            "review/retro, standups, regular syncs, recurring 'time block' holds) — these are standing "
+            "cadence, not sprint goals; use the person's canonical team name as owner, not a calendar "
+            "account handle (e.g. 'shauryajps' is Shaurya).\n"
             "  - A clear commitment, deadline, or follow-up found in email -> a goal for the relevant "
             "person.\n"
-            "  - An unfinished item carried over from a previous sprint -> carry it forward as a goal.\n"
+            "  - An unfinished item carried over from a previous sprint -> carry it forward (highest priority).\n"
+            "  - A North Star / SOW deliverable that is due, behind, or active THIS sprint -> a goal for "
+            "its owner (Shiv or Antonio). North Star is the lowest-priority source and not the master "
+            "list — be selective and don't pad everyone — but DO include Shiv's & Antonio's genuinely "
+            "active Journey deliverables; do not drop their real work.\n"
             "- Use the precise names/dates/details from the context (not vague paraphrases).\n"
             "- The ONLY limit: do not invent goals with no basis in EITHER the transcript OR these "
             "sources. Every goal must trace to the transcript or to an authoritative source here.\n\n"
@@ -436,14 +454,27 @@ def extract_goals_from_sources(
         "You extract sprint goals PURELY from the project context and live sources below "
         "(team roles, the Journey North Star, and live calendar/email/Drive data). There is "
         "NO meeting transcript — surface the goals these sources imply.\n\n"
-        f"TEAM: {team}. Attribute every goal to the correct owner using the team roles. "
+        f"TEAM: {team}. Attribute every goal to the correct owner using the team roles, and "
+        "ALWAYS use these exact team names as the owner — never a calendar account handle, "
+        "display name, or email (e.g. an event owned by 'shauryajps' belongs to 'Shaurya'). "
         "Journey / North-Star items belong to Shiv and Antonio only.\n\n"
+        "SOURCE PRIORITY (highest -> lowest): (1) unfinished CARRY-OVER from last sprint, "
+        "(2) CALENDAR & EMAIL commitments this week, (3) the NORTH STAR. The North Star is the "
+        "team's LONG-TERM goal, NOT the master task list — weight it LOWEST and don't pad every "
+        "person with it; but DO still surface the active/due North Star deliverables as real goals "
+        "for Shiv or Antonio (their core Journey work) — don't drop them.\n\n"
         "CREATE one goal, for the right owner, from each of these:\n"
-        "- each calendar event this week (meeting, demo, travel, networking) -> a 'prepare for / "
-        "attend' goal; respect anyone marked unavailable\n"
-        "- each North Star / SOW deliverable due, behind, or in progress this sprint\n"
+        "- each unfinished carry-over from a previous sprint (highest priority)\n"
+        "- each calendar event this week (demo, travel, networking, external/client meeting) -> a "
+        "'prepare for / attend' goal; respect anyone marked unavailable. EXCLUDE routine cadence "
+        "ceremonies and recurring internal meetings — sprint planning, sprint review/retro, daily "
+        "or weekly standups, regular team syncs, and recurring 'time block' holds are part of the "
+        "team's standing cadence, NOT sprint goals; do not create goals for them\n"
         "- each clear commitment, deadline, or follow-up in email\n"
-        "- each unfinished carry-over from a previous sprint\n"
+        "- EACH North Star / SOW deliverable that is overdue or due within ~2 weeks -> a goal for "
+        "its owner, Shiv or Antonio (these are the BULK of Shiv's & Antonio's sprint — include them "
+        "all; only skip far-future items a month+ out). NEVER give North Star goals to Cameron or "
+        "Shaurya. It ranks below the meeting/calendar, but don't drop Shiv's or Antonio's real work.\n"
         "Skip pure noise (newsletters, marketing email, verification codes, automated "
         "notifications). Do NOT invent goals with no basis in the sources.\n\n"
         'OUTPUT ONLY this JSON: {"people":[{"name":str,"goals":[GOAL,...]}]} where GOAL is '
@@ -518,17 +549,56 @@ def merge_extractions(primary: dict, secondary: dict) -> dict:
     return primary
 
 
-def parse_sprint_draft(draft_text: str, debug: bool = False) -> dict:
-    """Layer-on-Granola mode: take a sprint-goals draft that's already roughly in
-    our format (e.g. produced by Granola's template) and structure it into our JSON
-    FAITHFULLY — don't add, drop, merge, or invent goals. The off-transcript goals
-    and learned fixes are added afterward by the sources pass + merge."""
+def parse_sprint_draft(
+    draft_text: str,
+    lessons_text: "str | None" = None,
+    examples_text: "str | None" = None,
+    debug: bool = False,
+) -> dict:
+    """Layer-on-Granola mode (the primary pipeline): take a sprint-goals draft
+    that's already roughly in our format (produced by the Granola template) and
+    structure it into our JSON. Goal CONTENT is preserved faithfully — don't add,
+    drop, merge, or invent goals — but the team's LEARNED CORRECTIONS and past
+    edit EXAMPLES are applied to refine each goal's wording/points/structure, so
+    the draft reflects what the AI has learned from earlier human edits. The
+    off-transcript goals (North Star / calendar / carry-over) are added afterward
+    by the sources pass + merge."""
     if not draft_text or not draft_text.strip():
         return {"meeting_summary": "", "process_improvement": "", "people": []}
+
+    if lessons_text and lessons_text.strip():
+        lessons_section = (
+            "\n\nAPPLY LEARNED CORRECTIONS: the rules below were distilled from past "
+            "human edits to earlier drafts. Apply them when structuring each person's "
+            "goals — refine wording, points, success criteria, subtasks and structure "
+            "to match them. They encode preferences the team has TAUGHT you and "
+            "OVERRIDE the draft's phrasing where they conflict. This is refinement "
+            "ONLY: do not add, drop, merge, or invent goals — every goal in the draft "
+            "stays, just expressed the way the team wants.\n"
+            "----- BEGIN LEARNED CORRECTIONS -----\n"
+            f"{lessons_text.strip()}\n"
+            "----- END LEARNED CORRECTIONS -----"
+        )
+    else:
+        lessons_section = ""
+
+    if examples_text and examples_text.strip():
+        examples_section = (
+            "\n\nPAST CORRECTION EXAMPLES (real before→after edits a human made to "
+            "earlier drafts for similar people/work — imitate the style and judgement "
+            "shown in the AFTER versions when refining):\n"
+            "----- BEGIN EXAMPLES -----\n"
+            f"{examples_text.strip()}\n"
+            "----- END EXAMPLES -----"
+        )
+    else:
+        examples_section = ""
+
     system_prompt = (
         "You convert a sprint-goals draft (already roughly in Agilow's format, e.g. "
-        "produced by Granola) into structured JSON. Preserve content FAITHFULLY — do "
-        "NOT add, drop, merge, or invent goals; just structure exactly what is there.\n\n"
+        "produced by Granola) into structured JSON. Preserve goal CONTENT FAITHFULLY "
+        "— do NOT add, drop, merge, or invent goals; structure exactly the goals that "
+        "are there.\n\n"
         'Output ONLY this JSON: {"process_improvement": str, "people": [{"name": str, '
         '"kaizen": str, "goals": [{"title": str, "description": str, "points": number, '
         '"points_is_estimated": false, "subtasks": [str], "success_criteria": str, '
@@ -537,7 +607,8 @@ def parse_sprint_draft(draft_text: str, debug: bool = False) -> dict:
         "process_improvement = the team-wide 'Process Improvement for the Week' line if "
         "present, else empty string. Capture each person's kaizen line and every goal "
         "with its points, description, subtasks, success criteria, dependencies (with "
-        "owner) and risks (with mitigation) exactly as written. No markdown, no fences."
+        "owner) and risks (with mitigation). No markdown, no fences."
+        f"{lessons_section}{examples_section}"
     )
     messages = [
         {"role": "system", "content": system_prompt},
@@ -568,6 +639,164 @@ def parse_sprint_draft(draft_text: str, debug: bool = False) -> dict:
         file=sys.stderr,
     )
     return result
+
+
+# What a well-formed Agilow goal contains — shown to the person in the UI so they
+# know what details to mention when they brain-dump, and used to instruct the model.
+ADDED_GOAL_GUIDE = (
+    "A good goal has: a short imperative title; rough effort in points "
+    "(~2 = major deliverable, ~0.5-1 = supporting task); 2+ concrete subtasks "
+    "(the steps); a measurable success criterion (a yes/no done test, ideally "
+    "with a date); and optionally who/what you depend on and the main risk."
+)
+
+
+def format_added_goals(
+    dump_text: str,
+    person: str,
+    start_number: int = 1,
+    existing_titles: "list[str] | None" = None,
+    lessons_text: "str | None" = None,
+    examples_text: "str | None" = None,
+    debug: bool = False,
+) -> str:
+    """Turn a person's free-form brain-dump (often Wispr Flow voice-to-text, so
+    messy) into one or more Agilow-formatted sprint-goal blocks to APPEND to their
+    section. Returns ONLY the new goal block(s) as text, numbered from
+    start_number, in the exact same format as the rest of the doc. Applies the
+    learned corrections + past examples so added goals match the team's style."""
+    if not dump_text or not dump_text.strip():
+        return ""
+
+    if lessons_text and lessons_text.strip():
+        lessons_section = (
+            "\n\nAPPLY THESE LEARNED CORRECTIONS (distilled from past human edits) "
+            "to how you write the goals — wording, points, success criteria, "
+            "structure:\n"
+            "----- BEGIN LEARNED CORRECTIONS -----\n"
+            f"{lessons_text.strip()}\n"
+            "----- END LEARNED CORRECTIONS -----"
+        )
+    else:
+        lessons_section = ""
+
+    if examples_text and examples_text.strip():
+        examples_section = (
+            "\n\nPAST CORRECTION EXAMPLES (imitate the style/judgement in the AFTER "
+            "versions):\n"
+            "----- BEGIN EXAMPLES -----\n"
+            f"{examples_text.strip()}\n"
+            "----- END EXAMPLES -----"
+        )
+    else:
+        examples_section = ""
+
+    avoid = ""
+    if existing_titles:
+        avoid = (
+            "\n\nThis person ALREADY has these goals — do NOT duplicate them, only "
+            "add genuinely new items from the dump:\n"
+            + "\n".join(f"- {t}" for t in existing_titles)
+        )
+
+    system_prompt = (
+        f"You turn {person}'s free-form brain-dump (often dictated via voice-to-text, "
+        "so it may be messy, run-on, or out of order) into one or more sprint goals, "
+        "formatted EXACTLY like the goal blocks below. Each distinct piece of work is "
+        "its OWN goal — split them, never merge unrelated items. Infer reasonable "
+        "points, subtasks, and a measurable success criterion when the dump doesn't "
+        "spell them out, but do NOT invent work the dump doesn't mention.\n\n"
+        f"{ADDED_GOAL_GUIDE}\n\n"
+        "Format each goal EXACTLY like this (number them sequentially starting at "
+        f"{start_number}):\n"
+        f"{start_number}. <imperative title> (<N> point[s])\n"
+        "<one-sentence description>\n"
+        "- <subtask>\n"
+        "- <subtask>\n"
+        "Success criteria: <measurable yes/no test, ideally dated>\n"
+        "\n(Add a 'Dependencies:' block with '- <desc> (Owner: <name|unassigned>)' "
+        "lines and/or a 'Risks:' block with '- <desc>' + '  Mitigation: <step>' only "
+        "if relevant.) Use 'point' when N==1, else 'points'. Put one blank line "
+        "between goals.\n\n"
+        "Output ONLY the formatted goal block(s) — no header, no person name, no "
+        "commentary, no code fences."
+        f"{lessons_section}{examples_section}{avoid}"
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content": f"{person}'s brain-dump:\n\n{dump_text.strip()}"},
+    ]
+    response = _call_api(messages)
+    cleaned = _strip_code_fences(response.choices[0].message.content.strip())
+    if debug:
+        print("--- ADDED GOALS RAW ---", file=sys.stderr)
+        print(cleaned, file=sys.stderr)
+    return cleaned
+
+
+def refine_section(
+    section_text: str,
+    person: str,
+    instruction: str,
+    lessons_text: "str | None" = None,
+    examples_text: "str | None" = None,
+    debug: bool = False,
+) -> str:
+    """Apply a single free-form change instruction to ONE person's existing
+    sprint-goals section, IN PLACE. The instruction may ask to remove goal(s),
+    reword/fix goal(s), add a goal, reorder, or otherwise adjust the section.
+    Everything the instruction doesn't reference is preserved exactly. Returns the
+    edited section text. This edits the current goals (not a transcript re-extract),
+    so removals reliably stick."""
+    if not section_text or not section_text.strip():
+        return section_text or ""
+
+    if lessons_text and lessons_text.strip():
+        lessons_section = (
+            "\n\nKeep these LEARNED PREFERENCES in mind while editing (wording, points, "
+            "structure):\n----- BEGIN PREFERENCES -----\n"
+            f"{lessons_text.strip()}\n----- END PREFERENCES -----"
+        )
+    else:
+        lessons_section = ""
+    if examples_text and examples_text.strip():
+        examples_section = (
+            "\n\nPAST EDIT EXAMPLES (imitate the AFTER style):\n"
+            "----- BEGIN EXAMPLES -----\n"
+            f"{examples_text.strip()}\n----- END EXAMPLES -----"
+        )
+    else:
+        examples_section = ""
+
+    system_prompt = (
+        f"You are editing {person}'s section of an Agilow sprint-goals document. Apply the "
+        "user's CHANGE INSTRUCTION, which may ask you to REMOVE one or more goals, REWORD or "
+        "fix goals, ADD a new goal, reorder, or otherwise adjust the section.\n\n"
+        "CRITICAL: keep every goal the instruction does NOT reference EXACTLY as it is — do "
+        "not silently drop, merge, or rewrite untouched goals, and do not pull in brand-new "
+        "goals the instruction didn't ask for.\n\n"
+        "Keep the EXACT format:\n"
+        f"- First line: '{person}: __ / TOTAL' where TOTAL is the sum of the goals' points "
+        "AFTER your change (integer if whole, else one decimal).\n"
+        "- If a 'Kaizen: ...' line is present, keep it (only change it if the instruction implies it).\n"
+        "- Then the goals, RENUMBERED sequentially from 1, each as: 'N. Title (P point[s])', a "
+        "one-sentence description line, '- subtask' lines, 'Success criteria: ...', and optional "
+        "'Dependencies:' / 'Risks:' blocks — matching the existing style. Use 'point' when P==1.\n"
+        "- When ADDING a goal, infer reasonable points, 2+ subtasks, and a measurable success criterion.\n"
+        "Output ONLY the edited section text — no commentary, no code fences."
+        f"{lessons_section}{examples_section}"
+    )
+    messages = [
+        {"role": "system", "content": system_prompt},
+        {"role": "user", "content":
+            f"CURRENT SECTION:\n\n{section_text.strip()}\n\nCHANGE INSTRUCTION:\n{instruction.strip()}"},
+    ]
+    response = _call_api(messages)
+    cleaned = _strip_code_fences(response.choices[0].message.content.strip())
+    if debug:
+        print("--- REFINED SECTION RAW ---", file=sys.stderr)
+        print(cleaned, file=sys.stderr)
+    return cleaned
 
 
 def format_sprint_doc(

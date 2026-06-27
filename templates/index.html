@@ -3,233 +3,790 @@
 <head>
 <meta charset="utf-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Loop 1 — Sprint Goals</title>
+<title>Agilow</title>
 <link rel="icon" type="image/png" href="/static/agilow-a.png" />
 <style>
   :root {
-    --navy: #16245C; --navy-soft: #243169; --navy-100: #EEF1F8;
+    --navy: #16245C; --navy-100: #EEF1F8;
     --orange: #F15A29; --orange-soft: #FDECE4;
-    --bg: #F6F7FB; --surface: #FFFFFF; --line: #E6E9F2;
-    --ink: #1B2235; --muted: #6B7280;
+    --bg: #FBFBFD; --surface: #FFFFFF; --line: #ECEDF3;
+    --ink: #1B2235; --muted: #6B7280; --muted-2: #9AA1B0;
     --good: #15935E; --bad: #DC4B5F;
-    --radius: 12px;
-    --shadow: 0 1px 3px rgba(20,30,60,.08), 0 8px 24px rgba(20,30,60,.05);
+    --radius: 14px;
+    --shadow: 0 1px 2px rgba(20,30,60,.05), 0 8px 30px rgba(20,30,60,.04);
   }
   * { box-sizing: border-box; }
-  html, body { margin: 0; }
+  html, body { margin: 0; height: 100%; }
   body {
     background: var(--bg); color: var(--ink);
     font: 15px/1.55 -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
     -webkit-font-smoothing: antialiased;
   }
+  textarea, input { font-family: inherit; color: var(--ink); }
 
-  /* Top app bar */
-  .topbar {
-    position: sticky; top: 0; z-index: 20;
-    display: flex; align-items: center; gap: 12px;
-    background: var(--navy); color: #fff;
-    padding: 12px 24px; box-shadow: 0 1px 0 rgba(0,0,0,.15);
+  /* ---------- App shell ---------- */
+  .app { display: flex; min-height: 100vh; }
+  .sidebar {
+    width: 248px; flex: 0 0 248px; border-right: 1px solid var(--line);
+    background: #fff; display: flex; flex-direction: column;
+    padding: 20px 14px; position: sticky; top: 0; height: 100vh;
   }
-  .brand { display: flex; align-items: center; gap: 10px; }
-  .brand .logo { display: block; width: 30px; height: 30px; object-fit: contain; }
-  .brand .word { font-weight: 700; font-size: 17px; letter-spacing: .2px; }
-  .topbar .sub { color: #aeb6d6; font-size: 13px;
-    border-left: 1px solid rgba(255,255,255,.18); padding-left: 12px; margin-left: 2px; }
+  .brand { display: flex; align-items: center; gap: 9px; padding: 4px 8px 18px; }
+  .brand img { width: 26px; height: 26px; object-fit: contain; }
+  .brand .word { font-weight: 700; font-size: 18px; color: var(--ink); letter-spacing: .2px; }
 
-  main { max-width: 880px; margin: 0 auto; padding: 28px 24px 64px; }
-
-  .card-surface {
-    background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px;
+  .nav { display: flex; flex-direction: column; gap: 2px; }
+  .nav a {
+    display: flex; align-items: center; gap: 11px; padding: 9px 11px; border-radius: 10px;
+    color: var(--muted); font-size: 14px; font-weight: 500; cursor: pointer;
+    text-decoration: none; transition: background .12s, color .12s;
   }
-  .section-label { font-size: 12px; font-weight: 600; text-transform: uppercase;
-    letter-spacing: .6px; color: var(--muted); margin: 0 0 8px; }
-
-  textarea, .field input {
-    width: 100%; background: #fff; color: var(--ink);
-    border: 1px solid var(--line); border-radius: 10px; padding: 12px 14px;
-    font-family: inherit; font-size: 14px; transition: border-color .15s, box-shadow .15s;
+  .nav a:hover { background: var(--navy-100); color: var(--ink); }
+  .nav a.active { background: var(--orange-soft); color: #c0461f; font-weight: 600; }
+  .nav a.primary { color: var(--orange); font-weight: 600; }
+  .nav a.primary.active { color: #c0461f; }
+  .nav a svg { width: 17px; height: 17px; flex: 0 0 auto; }
+  .nav-divider { height: 1px; background: var(--line); margin: 12px 6px; }
+  .sidebar-spacer { flex: 1; }
+  .workspace {
+    display: flex; align-items: center; gap: 10px; padding: 9px 10px; border-radius: 10px;
+    border: 1px solid var(--line); margin-top: 8px;
   }
-  textarea { font: 13px/1.6 ui-monospace, SFMono-Regular, Menlo, monospace; resize: vertical; }
-  textarea:focus, .field input:focus {
-    outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft);
+  .workspace .avatar { width: 30px; height: 30px; border-radius: 8px; background: #5b54e0;
+    color: #fff; display: grid; place-items: center; font-weight: 700; font-size: 13px; }
+  .workspace .who-name { font-size: 13px; font-weight: 600; }
+  .workspace .who-sub { font-size: 11.5px; color: var(--muted); }
+
+  .main { flex: 1; min-width: 0; overflow-x: hidden; }
+  .container { max-width: 760px; margin: 0 auto; padding: 40px 28px 80px; }
+
+  .view { display: none; }
+  .view.active { display: block; }
+
+  /* ---------- New Plan hero ---------- */
+  .hero { text-align: center; padding-top: 26px; }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 6px; font-size: 12.5px; font-weight: 600;
+    color: #c0461f; background: var(--orange-soft); padding: 5px 12px; border-radius: 999px;
   }
-  #transcript { min-height: 200px; }
+  .hero h1 { font-size: 30px; line-height: 1.2; margin: 18px 0 8px; color: var(--ink); letter-spacing: -.5px; }
+  .hero .sub { color: var(--muted); font-size: 15px; margin: 0 0 26px; }
 
-  .row { display: flex; gap: 12px; flex-wrap: wrap; align-items: center; margin-top: 14px; }
-  .field { display: flex; flex-direction: column; gap: 5px; }
-  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
-  .field input { min-width: 240px; }
+  .composer {
+    text-align: left; background: var(--surface); border: 1.5px solid var(--line);
+    border-radius: 16px; box-shadow: var(--shadow); padding: 6px; transition: border-color .15s, box-shadow .15s;
+  }
+  .composer:focus-within { border-color: var(--orange); box-shadow: 0 0 0 4px var(--orange-soft); }
+  #transcript {
+    width: 100%; border: none; outline: none; resize: vertical; background: transparent;
+    padding: 16px 16px 4px; min-height: 132px; font-size: 15px; line-height: 1.6; color: var(--ink);
+  }
+  #transcript::placeholder { color: var(--muted-2); }
+  .composer-bar { display: flex; align-items: center; justify-content: space-between; padding: 8px; }
 
-  /* Buttons */
   button {
-    background: var(--orange); color: #fff; border: none; border-radius: 9px;
+    background: var(--orange); color: #fff; border: none; border-radius: 11px;
     padding: 11px 18px; font-weight: 600; font-size: 14px; cursor: pointer;
-    transition: filter .15s, transform .05s, box-shadow .15s;
+    transition: filter .15s, transform .05s; font-family: inherit;
   }
-  button:hover { filter: brightness(1.05); }
+  button:hover { filter: brightness(1.04); }
   button:active { transform: translateY(1px); }
   button:disabled { opacity: .55; cursor: default; filter: none; }
+  button.ghost { background: transparent; color: var(--muted); border: 1px solid var(--line);
+    font-weight: 500; }
+  button.ghost:hover { border-color: var(--muted-2); color: var(--ink); filter: none; }
   button.secondary { background: #fff; color: var(--navy); border: 1px solid var(--line); }
   button.secondary:hover { border-color: var(--navy); filter: none; }
 
-  details { margin-top: 14px; }
-  summary { cursor: pointer; color: var(--navy); font-size: 13px; font-weight: 600; }
-  summary::marker { color: var(--muted); }
-  .note { color: var(--muted); font-size: 13px; }
-  .ok { color: var(--good); font-weight: 600; }
-
-  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px;
-    border-radius: 999px; background: var(--navy-100); color: var(--navy); margin-left: 6px; }
-  .pill.alt { background: var(--orange-soft); color: #b8431d; }
-
-  #summary { margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--orange);
-    background: var(--orange-soft); color: #5a3320; border-radius: 8px; font-size: 13.5px; }
-  #summary:empty { display: none; }
-  #process { margin-top: 18px; padding: 12px 14px; border-left: 3px solid var(--navy);
-    background: var(--navy-100); color: var(--navy); border-radius: 8px; font-size: 13.5px;
-    font-weight: 600; }
-  #process:empty { display: none; }
-  #error { color: var(--bad); margin-top: 12px; white-space: pre-wrap; font-size: 13.5px; }
-  #error:empty { display: none; }
-
-  /* Per-person cards */
-  #sections { display: flex; flex-direction: column; gap: 14px; margin-top: 18px; }
-  .card {
-    background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
-    box-shadow: var(--shadow); padding: 16px 18px; transition: box-shadow .15s, opacity .15s;
+  .advanced { display: none; margin-top: 12px; padding: 16px; background: #fff;
+    border: 1px solid var(--line); border-radius: 12px; }
+  .advanced.open { display: block; }
+  .adv-row { display: flex; gap: 16px; flex-wrap: wrap; }
+  .field { display: flex; flex-direction: column; gap: 5px; }
+  .field label { font-size: 12px; color: var(--muted); font-weight: 500; }
+  .field input, .field select, .conn-select {
+    padding: 9px 11px; border: 1px solid var(--line); border-radius: 9px; font-size: 13.5px;
+    background: #fff; color: var(--ink); min-width: 200px;
   }
-  .card:hover { box-shadow: 0 2px 6px rgba(20,30,60,.10), 0 12px 32px rgba(20,30,60,.07); }
+  .field input:focus, .field select:focus, .conn-select:focus {
+    outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+
+  /* ---------- Chips ---------- */
+  .chip-section { margin-top: 34px; }
+  .chip-section .label { font-size: 12.5px; font-weight: 600; color: var(--muted);
+    text-transform: none; margin: 0 0 10px; }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; }
+  .chip {
+    display: inline-flex; align-items: center; gap: 7px; padding: 7px 13px; border-radius: 999px;
+    border: 1px solid var(--line); background: #fff; font-size: 13px; color: var(--ink);
+    cursor: default;
+  }
+  .chip.clickable { cursor: pointer; transition: border-color .12s, background .12s; }
+  .chip.clickable:hover { border-color: var(--muted-2); background: var(--navy-100); }
+  .chip .dot { width: 7px; height: 7px; border-radius: 50%; background: var(--muted-2); }
+  .chip.ok .dot { background: var(--good); }
+  .chip.off { color: var(--muted); }
+  .chip svg { width: 15px; height: 15px; }
+  .chip .tick { color: var(--good); font-weight: 700; }
+
+  .footer-note { text-align: center; color: var(--muted-2); font-size: 12.5px; margin-top: 48px; }
+
+  /* ---------- Results (per-person cards) ---------- */
+  #results { margin-top: 30px; }
+  #summary { padding: 12px 14px; border-left: 3px solid var(--orange); background: var(--orange-soft);
+    color: #5a3320; border-radius: 8px; font-size: 13.5px; margin-bottom: 14px; }
+  #summary:empty { display: none; }
+  #process { padding: 12px 14px; border-left: 3px solid var(--navy); background: var(--navy-100);
+    color: var(--navy); border-radius: 8px; font-size: 13.5px; font-weight: 600; margin-bottom: 14px; }
+  #process:empty { display: none; }
+  #appliedNote { display: block; color: var(--muted); font-size: 13px; margin: 10px 2px; }
+  #error { color: var(--bad); white-space: pre-wrap; font-size: 13.5px; margin: 10px 0; }
+  #error:empty { display: none; }
+  #sections { display: flex; flex-direction: column; gap: 14px; }
+
+  .card { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 16px 18px; transition: box-shadow .15s, opacity .15s; }
   .card.rejected { opacity: .5; border-color: var(--bad); }
   .card-head { display: flex; align-items: center; justify-content: space-between; gap: 10px; }
   .card-head .name { font-weight: 700; font-size: 16px; color: var(--navy); }
   .card-head .controls { display: flex; gap: 6px; }
   .toggle { font-size: 12px; font-weight: 600; padding: 6px 12px; border-radius: 999px;
-    border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer;
-    transition: all .12s; }
+    border: 1px solid var(--line); background: #fff; color: var(--muted); cursor: pointer; transition: all .12s; }
   .toggle:hover { border-color: var(--muted); filter: none; }
   .toggle.active-approve { background: var(--good); color: #fff; border-color: var(--good); }
   .toggle.active-reject { background: var(--bad); color: #fff; border-color: var(--bad); }
   .status-tag { font-size: 11px; font-weight: 600; color: var(--orange); margin-left: 8px; }
-  .card textarea { min-height: 60px; margin-top: 12px; overflow: hidden; resize: none;
-    font-size: 13.5px; line-height: 1.7; background: #FCFCFE; }
+  .ta-wrap { position: relative; margin-top: 12px; }
+  .card textarea { width: 100%; min-height: 60px; overflow: hidden; resize: none;
+    border: 1px solid var(--line); border-radius: 10px; padding: 12px; display: block;
+    font: 13.5px/1.7 ui-monospace, SFMono-Regular, Menlo, monospace; background: #FCFCFE; }
+  .card textarea.clamped { max-height: 190px; overflow: hidden; }
+  .card textarea:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+  .card.collapsed .ta-wrap::after {
+    content: ""; position: absolute; left: 1px; right: 1px; bottom: 1px; height: 52px;
+    border-radius: 0 0 10px 10px; pointer-events: none;
+    background: linear-gradient(to bottom, rgba(252,252,254,0), #FCFCFE 85%); }
+  .view-bar { display: flex; gap: 16px; }
+  .expand-btn { margin-top: 8px; background: transparent; border: none; color: var(--orange);
+    font-size: 13px; font-weight: 600; padding: 2px 0; cursor: pointer; }
+  .expand-btn:hover { filter: none; text-decoration: underline; }
+
+  /* Styled goals preview (readable hierarchy) */
+  .gp.clamped { max-height: 340px; overflow: hidden; }
+  .gp-score { font-size: 12px; color: var(--muted); margin-bottom: 10px; }
+  .gp-score b { color: var(--ink); }
+  .gp-kaizen { background: var(--orange-soft); color: #5a3320; border-radius: 9px;
+    padding: 9px 12px; font-size: 13px; line-height: 1.45; margin-bottom: 14px; }
+  .gp-kaizen-tag { font-weight: 700; text-transform: uppercase; font-size: 10px; letter-spacing: .6px;
+    color: #b8431d; margin-right: 8px; }
+  .gp-goal { padding: 13px 0; border-top: 1px solid var(--line); }
+  .gp-goal:first-of-type { border-top: none; padding-top: 2px; }
+  .gp-goal-head { display: flex; align-items: flex-start; gap: 10px; margin-bottom: 6px; }
+  .gp-num { flex: 0 0 auto; width: 22px; height: 22px; border-radius: 7px; background: var(--orange);
+    color: #fff; font-size: 12px; font-weight: 700; display: inline-flex; align-items: center;
+    justify-content: center; margin-top: 1px; }
+  .gp-title { font-weight: 700; font-size: 15px; color: var(--navy); flex: 1; line-height: 1.35; }
+  .gp-pts { flex: 0 0 auto; font-size: 11px; font-weight: 600; color: var(--muted);
+    background: var(--navy-100); padding: 3px 9px; border-radius: 999px; white-space: nowrap; }
+  .gp-desc { font-size: 13px; color: var(--ink); margin: 0 0 7px 32px; line-height: 1.5; }
+  .gp-desc-top { margin-left: 0; color: var(--muted); }
+  .gp-bullet { font-size: 13px; color: var(--ink); margin: 3px 0 3px 32px; padding-left: 15px;
+    position: relative; line-height: 1.45; }
+  .gp-bullet::before { content: "•"; position: absolute; left: 3px; color: var(--orange); font-weight: 700; }
+  .gp-label { font-size: 10px; font-weight: 700; text-transform: uppercase; letter-spacing: .6px;
+    color: var(--muted-2); margin: 9px 0 3px 32px; }
+  .gp-label-risk { color: var(--bad); }
+  .gp-val { font-size: 13px; color: var(--ink); margin: 0 0 2px 32px; line-height: 1.5; }
+  .gp-mit { font-size: 12.5px; color: var(--muted); margin: 2px 0 3px 46px; line-height: 1.45; }
+  .gp-mit b { color: var(--ink); font-weight: 600; }
+
+  /* Inline editing in the styled view: every text leaf is editable in place. */
+  .gp-ed { outline: none; border-radius: 4px; padding: 0 3px; margin: 0 -3px; cursor: text;
+    transition: background .1s, box-shadow .1s; }
+  .gp-ed:hover { background: var(--navy-100); }
+  .gp-ed:focus { background: #fff; box-shadow: 0 0 0 2px var(--orange-soft); }
+  .gp-ed:empty::before { content: "…"; color: var(--muted-2); }
+  .gp-goal-head .goal-del { background: transparent; border: none; color: var(--muted-2);
+    cursor: pointer; font-size: 12px; padding: 0 4px; opacity: 0; transition: opacity .12s;
+    flex: 0 0 auto; margin-top: 1px; }
+  .gp-goal:hover .goal-del { opacity: 1; }
+  .goal-del:hover { color: var(--bad); filter: none; }
+  .gp-bullet-del { position: absolute; right: 0; top: 50%; transform: translateY(-50%);
+    background: transparent; border: none; color: var(--muted-2); cursor: pointer; font-size: 11px;
+    padding: 0 4px; opacity: 0; transition: opacity .12s; }
+  .gp-bullet:hover .gp-bullet-del { opacity: 1; }
+  .gp-bullet-del:hover { color: var(--bad); filter: none; }
+  .gp-add-sub { background: transparent; border: none; color: var(--muted); cursor: pointer;
+    font-size: 12px; font-weight: 600; padding: 5px 0 2px 32px; }
+  .gp-add-sub:hover { color: var(--orange); filter: none; }
+  .gp-add-goal { margin-top: 14px; background: #fff; color: var(--navy); border: 1px dashed var(--line);
+    border-radius: 9px; padding: 9px 14px; font-size: 13px; font-weight: 600; width: 100%; }
+  .gp-add-goal:hover { border-color: var(--orange); color: var(--orange); filter: none; }
+  .gp-pts .gp-ed { display: inline-block; min-width: 12px; text-align: center; }
+  .gp-edit-hint { color: var(--muted-2); font-size: 12px; margin: 2px 2px 10px; }
+
   .reason-input { width: 100%; margin-top: 8px; padding: 8px 12px; font-size: 13px;
-    color: var(--ink); background: #fff; border: 1px dashed var(--line);
-    border-radius: 8px; transition: border-color .15s, box-shadow .15s; }
-  .reason-input::placeholder { color: var(--muted); }
+    background: #fff; border: 1px dashed var(--line); border-radius: 8px; }
   .reason-input:focus { outline: none; border-style: solid; border-color: var(--orange);
     box-shadow: 0 0 0 3px var(--orange-soft); }
 
-  #actions { margin-top: 20px; display: flex; gap: 10px; flex-wrap: wrap; }
+  .add-block { margin-top: 12px; border-top: 1px dashed var(--line); padding-top: 10px; }
+  .add-block summary { color: var(--orange); cursor: pointer; font-size: 13px; font-weight: 600; }
+  .add-guide { color: var(--muted); font-size: 12.5px; line-height: 1.55; margin: 8px 0; }
+  .add-dump { width: 100%; min-height: 70px; resize: vertical; border: 1px solid var(--line);
+    border-radius: 10px; padding: 10px 12px; font-size: 13.5px; line-height: 1.6; background: #FCFCFE; }
+  .add-dump:focus { outline: none; border-color: var(--orange); box-shadow: 0 0 0 3px var(--orange-soft); }
+  .add-block .row { display: flex; gap: 10px; align-items: center; margin-top: 8px; }
+  .add-block button.secondary { padding: 8px 14px; font-size: 13px; }
 
-  /* Learned panel */
-  .panel { margin-top: 22px; background: var(--surface); border: 1px solid var(--line);
-    border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; }
-  .panel h3 { margin: 0 0 12px; font-size: 15px; color: var(--navy);
-    display: flex; align-items: center; flex-wrap: wrap; gap: 4px; }
-  #rules { display: flex; flex-direction: column; gap: 7px; }
-  .rule-row { display: flex; align-items: flex-start; justify-content: space-between;
-    gap: 10px; background: var(--navy-100); border: 1px solid var(--line);
-    border-radius: 9px; padding: 9px 12px; font-size: 13.5px; color: var(--ink); }
-  .rule-del { background: transparent; color: var(--muted); border: none;
-    cursor: pointer; font-size: 13px; padding: 0 4px; flex: 0 0 auto; line-height: 1.4; }
+  #actions { display: none; gap: 8px; flex-wrap: wrap; }
+
+  #genError { color: var(--bad); font-size: 13.5px; margin: 14px 2px 0; }
+  #genError:empty { display: none; }
+
+  /* Result screen */
+  .result-head { display: flex; align-items: center; justify-content: space-between; gap: 12px;
+    margin-bottom: 16px; }
+  .result-actions { gap: 8px; flex-wrap: wrap; }
+  .back-btn { padding: 8px 14px; }
+  .result-title { font-size: 23px; margin: 0 0 6px; letter-spacing: -.4px; color: var(--ink); }
+
+  /* ---------- Page headers ---------- */
+  .page-head { margin-bottom: 24px; }
+  .page-head h2 { font-size: 24px; margin: 0 0 4px; letter-spacing: -.4px; }
+  .page-head p { color: var(--muted); font-size: 14px; margin: 0; }
+
+  /* ---------- Plans list ---------- */
+  .plan-list { display: flex; flex-direction: column; gap: 2px; }
+  .plan-item { display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    padding: 14px 14px; border-radius: 11px; cursor: pointer; transition: background .12s; }
+  .plan-item:hover { background: #fff; box-shadow: var(--shadow); }
+  .plan-item + .plan-item { border-top: 1px solid var(--line); }
+  .plan-item:hover { border-color: transparent; }
+  .plan-title { font-weight: 600; font-size: 15px; }
+  .plan-meta { color: var(--muted); font-size: 12.5px; margin-top: 2px; }
+  .plan-date { color: var(--muted-2); font-size: 13px; flex: 0 0 auto; }
+
+  /* ---------- Learned Context (knowledge base) ---------- */
+  .kb-group { margin-bottom: 28px; }
+  .kb-group h3 { font-size: 13px; font-weight: 700; color: var(--navy); text-transform: uppercase;
+    letter-spacing: .6px; margin: 0 0 12px; display: flex; align-items: center; gap: 8px; }
+  .kb-count { font-size: 11px; font-weight: 600; color: var(--muted); background: var(--navy-100);
+    padding: 2px 8px; border-radius: 999px; letter-spacing: 0; text-transform: none; }
+  #rules, #examples { display: flex; flex-direction: column; gap: 8px; }
+  .rule-row { display: flex; align-items: flex-start; justify-content: space-between; gap: 10px;
+    background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 11px 14px;
+    font-size: 13.5px; box-shadow: var(--shadow); }
+  .rule-del { background: transparent; color: var(--muted-2); border: none; cursor: pointer;
+    font-size: 13px; padding: 0 4px; flex: 0 0 auto; }
   .rule-del:hover { color: var(--bad); filter: none; }
-  .who { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 7px;
-    border-radius: 999px; background: var(--orange-soft); color: #b8431d; margin-right: 7px; }
+  .who { display: inline-block; font-size: 11px; font-weight: 700; padding: 1px 8px; border-radius: 999px;
+    background: var(--orange-soft); color: #b8431d; margin-right: 8px; }
+  .example { background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 12px 14px;
+    box-shadow: var(--shadow); font-size: 12.5px; }
+  .example .ex-name { font-weight: 700; color: var(--navy); margin-bottom: 6px; }
+  .example .ex-col { color: var(--muted); white-space: pre-wrap; line-height: 1.5; }
+  .example .ex-after { color: var(--ink); margin-top: 6px; }
+  .example .ex-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--muted-2); }
+
+  /* ---------- Connectors (Settings) ---------- */
+  .panel { background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius);
+    box-shadow: var(--shadow); padding: 18px; margin-bottom: 18px; }
+  .panel h3 { margin: 0 0 12px; font-size: 15px; color: var(--navy); display: flex; align-items: center; gap: 8px; }
+  .pill { display: inline-block; font-size: 11px; font-weight: 600; padding: 3px 9px; border-radius: 999px;
+    background: var(--navy-100); color: var(--navy); }
   #connBody { display: flex; flex-direction: column; gap: 12px; }
   .conn-actions { display: flex; gap: 8px; flex-wrap: wrap; }
   .conn-group h4 { margin: 0 0 5px; font-size: 13px; color: var(--navy); }
-  .conn-list { margin: 0; padding: 0; list-style: none; display: flex;
-    flex-direction: column; gap: 4px; }
-  .conn-list li { font-size: 12.5px; color: var(--ink); background: var(--navy-100);
-    border-radius: 7px; padding: 6px 10px; }
+  .conn-list { margin: 0; padding: 0; list-style: none; display: flex; flex-direction: column; gap: 4px; }
+  .conn-list li { font-size: 12.5px; color: var(--ink); background: var(--navy-100); border-radius: 7px; padding: 6px 10px; }
   .conn-empty { color: var(--muted); font-size: 12.5px; }
-  .conn-select { width: 100%; padding: 8px 10px; border: 1px solid var(--line);
-    border-radius: 8px; font-size: 13px; background: #fff; color: var(--ink); }
-  .conn-select:focus { outline: none; border-color: var(--orange);
-    box-shadow: 0 0 0 3px var(--orange-soft); }
-  .conn-group select + .reason-input { margin-top: 6px; }
+  .conn-select { width: 100%; }
 
-  /* Spinner (sits inside the orange primary button) */
+  .note { color: var(--muted); font-size: 13px; }
+  .ok { color: var(--good); font-weight: 600; }
+  .bad-text { color: var(--bad); }
+  .empty-state { color: var(--muted); font-size: 14px; padding: 30px 0; text-align: center; }
+
   .spinner { display: inline-block; width: 14px; height: 14px;
     border: 2px solid rgba(255,255,255,.5); border-top-color: #fff; border-radius: 50%;
     animation: spin .8s linear infinite; vertical-align: -2px; margin-right: 7px; }
+  .spinner.dark { border: 2px solid var(--navy-100); border-top-color: var(--orange); }
   @keyframes spin { to { transform: rotate(360deg); } }
+
+  /* Per-member preference groups (Learned Context) */
+  .pref-group { background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px; }
+  .pref-group-head { font-weight: 700; color: var(--navy); font-size: 14px; margin-bottom: 10px; }
+  .pref-group .rule-row { box-shadow: none; margin-bottom: 6px; }
+  .rule-text { flex: 1; }
+  .rule-tools { display: flex; gap: 2px; flex: 0 0 auto; }
+  .rule-edit { background: transparent; color: var(--muted-2); border: none; cursor: pointer;
+    font-size: 13px; padding: 0 4px; }
+  .rule-edit:hover { color: var(--navy); filter: none; }
+  .pref-add { display: flex; gap: 8px; margin-top: 8px; }
+  .pref-add input { flex: 1; }
+  .pref-add button { padding: 8px 14px; font-size: 13px; }
+
+  /* Live processing steps */
+  .proc-step { background: #fff; border: 1px solid var(--line); border-radius: 12px;
+    box-shadow: var(--shadow); padding: 14px 16px; margin-bottom: 12px;
+    opacity: 0; animation: fadeUp .4s ease forwards; }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: none; } }
+  .proc-head { display: flex; align-items: center; gap: 9px; color: var(--ink); font-size: 14px; }
+  .proc-body { color: var(--muted); font-size: 13px; margin-top: 6px; padding-left: 23px; }
+  .proc-body ul { margin: 6px 0 0; padding-left: 18px; }
+  .proc-body li { margin: 2px 0; }
+
+  /* Per-card preferences-applied trace */
+  .trace-block summary { color: var(--navy); }
+  .trace-body { font-size: 12.5px; color: var(--ink); margin-top: 8px; }
+  .trace-label { font-size: 10.5px; font-weight: 700; text-transform: uppercase; letter-spacing: .5px;
+    color: var(--muted-2); margin-top: 8px; }
+  .trace-body ul { margin: 4px 0 0; padding-left: 18px; }
+  .trace-body li { margin: 2px 0; }
+  .trace-edit-note { margin-top: 10px; }
+  .trace-link { color: var(--orange); font-weight: 600; text-decoration: none; }
+
+  /* Per-person regenerate */
+  .regen-block summary { color: var(--navy); }
+  .regen-save { display: flex; align-items: center; gap: 7px; font-size: 12.5px; color: var(--muted);
+    margin-top: 10px; cursor: pointer; }
+  .regen-save input { width: 14px; height: 14px; accent-color: var(--orange); }
+  .regen-reasoning { margin-top: 12px; padding: 10px 12px; border-left: 3px solid var(--navy);
+    background: var(--navy-100); color: var(--navy); border-radius: 8px; font-size: 12.5px; line-height: 1.5; }
+  .regen-current { margin: 8px 0 4px; padding: 10px 12px; background: #FBFBFD;
+    border: 1px solid var(--line); border-radius: 9px; font-size: 12.5px; }
+  .regen-current ul { margin: 4px 0 0; padding-left: 18px; }
+  .regen-current li { margin: 2px 0; }
+
+  /* Single "Tell Agilow what to change" box */
+  .change-block summary { color: var(--orange); display: flex; align-items: center; gap: 8px; }
+  .info-btn { width: 17px; height: 17px; border-radius: 50%; border: 1px solid var(--muted-2);
+    background: #fff; color: var(--muted); font-size: 11px; font-weight: 700; font-style: italic;
+    line-height: 1; padding: 0; cursor: pointer; display: inline-flex; align-items: center;
+    justify-content: center; font-family: Georgia, "Times New Roman", serif; }
+  .info-btn:hover { border-color: var(--orange); color: var(--orange); filter: none; }
+  .change-help { margin: 10px 0; padding: 12px 14px; background: var(--orange-soft);
+    border-radius: 10px; font-size: 12.5px; color: #5a3320; }
+  .change-help .help-title { font-weight: 600; margin-bottom: 6px; }
+  .change-help ul { margin: 0 0 8px; padding-left: 18px; }
+  .change-help li { margin: 3px 0; }
+  .change-help .note { color: #7a5640; }
 </style>
 </head>
 <body>
-<header class="topbar">
-  <div class="brand">
-    <img src="/static/agilow-a.png" alt="Agilow" class="logo" />
-    <span class="word">Agilow</span>
-  </div>
-  <span class="sub">Loop 1 · Sprint Goals</span>
-</header>
-
-<main>
-  <div class="card-surface">
-    <div class="row" style="margin-top:0; justify-content:space-between">
-      <p class="section-label" style="margin:0">Input</p>
-      <select id="inputMode" class="conn-select" style="width:auto">
-        <option value="transcript">Raw Granola transcript</option>
-        <option value="draft">Granola sprint-goals draft (layer on top)</option>
-      </select>
+<div class="app">
+  <!-- ---------------- Sidebar ---------------- -->
+  <aside class="sidebar">
+    <div class="brand">
+      <img src="/static/agilow-a.png" alt="Agilow" />
+      <span class="word">Agilow</span>
     </div>
-    <textarea id="transcript" placeholder="Paste your Granola transcript here…"></textarea>
-
-    <div class="row">
-      <button id="generateBtn">Generate sprint goals</button>
-      <span id="appliedNote" class="note"></span>
+    <nav class="nav">
+      <a data-view="new" class="primary active">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M12 5v14M5 12h14"/></svg>
+        New Plan
+      </a>
+      <a data-view="plans">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>
+        Plans
+      </a>
+      <a data-view="context">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></svg>
+        Learned Context
+      </a>
+      <div class="nav-divider"></div>
+      <a data-view="settings">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+        Settings
+      </a>
+    </nav>
+    <div class="sidebar-spacer"></div>
+    <div class="workspace">
+      <div class="avatar">A</div>
+      <div>
+        <div class="who-name">Agilow</div>
+        <div class="who-sub">Founder Workspace</div>
+      </div>
     </div>
+  </aside>
 
-    <details>
-      <summary>Settings</summary>
-      <div class="row">
-        <div class="field">
-          <label for="sprintLabel">Sprint label</label>
-          <input id="sprintLabel" value="Current Sprint" />
+  <!-- ---------------- Main ---------------- -->
+  <div class="main">
+
+    <!-- ===== New Plan ===== -->
+    <section class="view active" id="view-new">
+      <div class="container">
+        <div class="hero">
+          <h1>What are we planning today?</h1>
+          <p class="sub">Paste your meeting transcript — Agilow extracts each person's goals and shapes them with your context and what it's learned.</p>
+
+          <div class="composer">
+            <textarea id="transcript" placeholder="Paste your raw Granola meeting transcript here — Agilow extracts everyone's goals and layers on your North Star, calendar, carry-overs and learned fixes…"></textarea>
+            <div class="composer-bar">
+              <button class="ghost" id="advancedBtn" type="button">⚙ Advanced Options</button>
+              <button id="generateBtn">✦ Generate Plan →</button>
+            </div>
+          </div>
+          <div id="genError"></div>
+
+          <div class="advanced" id="advanced">
+            <div class="adv-row">
+              <div class="field">
+                <label for="inputMode">Input</label>
+                <select id="inputMode" class="conn-select" style="width:auto">
+                  <option value="transcript">Raw Granola transcript</option>
+                  <option value="draft">Granola template output (sprint-goals draft)</option>
+                </select>
+              </div>
+              <div class="field">
+                <label for="sprintLabel">Sprint label</label>
+                <input id="sprintLabel" value="Current Sprint" />
+              </div>
+              <div class="field">
+                <label for="team">Team (comma-separated)</label>
+                <input id="team" value="{{ default_team }}" />
+              </div>
+            </div>
+          </div>
         </div>
-        <div class="field">
-          <label for="team">Team (comma-separated)</label>
-          <input id="team" value="{{ default_team }}" />
+
+        <!-- Connected sources -->
+        <div class="chip-section">
+          <p class="label">Connected sources</p>
+          <div class="chips" id="connChips"><span class="note">Loading…</span></div>
+        </div>
+
+        <!-- Recent context -->
+        <div class="chip-section">
+          <p class="label">Recent context Agilow is using</p>
+          <div class="chips" id="recentChips"><span class="note">—</span></div>
+        </div>
+
+        <p class="footer-note">🔒 Your data is private and never used for training.</p>
+      </div>
+    </section>
+
+    <!-- ===== Result (a generated / reopened plan) ===== -->
+    <section class="view" id="view-result">
+      <div class="container">
+        <div class="result-head">
+          <button class="ghost back-btn" id="backBtn" type="button">← New Plan</button>
+          <div class="result-actions" id="actions">
+            <button id="learnBtn">✓ Approve &amp; Learn</button>
+            <button id="copyBtn" class="secondary">Copy for Google Doc</button>
+            <button id="downloadBtn" class="secondary">Download</button>
+          </div>
+        </div>
+        <h2 id="resultTitle" class="result-title">Sprint goals</h2>
+        <span id="appliedNote"></span>
+        <div id="error"></div>
+        <div id="process"></div>
+        <div id="summary"></div>
+        <div id="sections"></div>
+      </div>
+    </section>
+
+    <!-- ===== Plans ===== -->
+    <section class="view" id="view-plans">
+      <div class="container">
+        <div class="page-head">
+          <h2>Plans</h2>
+          <p>Every plan you've generated. Click one to reopen it.</p>
+        </div>
+        <div class="plan-list" id="planList"><p class="empty-state">Loading…</p></div>
+      </div>
+    </section>
+
+    <!-- ===== Learned Context ===== -->
+    <section class="view" id="view-context">
+      <div class="container">
+        <div class="page-head">
+          <h2>Learned Context</h2>
+          <p>What Agilow knows and has learned from your edits. This shapes every plan.</p>
+        </div>
+
+        <div class="kb-group">
+          <h3>Preferences <span class="kb-count" id="learnedCount">…</span></h3>
+          <div id="rules"><p class="empty-state">Loading…</p></div>
+        </div>
+
+        <div class="kb-group">
+          <h3>Past Edits <span class="kb-count" id="exampleCount">…</span></h3>
+          <p class="note" style="margin:-6px 0 12px">Before → after pairs from real edits. Agilow imitates these.</p>
+          <div id="examples"><p class="empty-state">—</p></div>
+        </div>
+
+        <div class="kb-group">
+          <h3>Recent Source Context</h3>
+          <p class="note" style="margin:-6px 0 12px">Live items pulled from Calendar, Gmail and Drive at last sync.</p>
+          <div class="chips" id="recentChips2"><span class="note">—</span></div>
         </div>
       </div>
-    </details>
-  </div>
+    </section>
 
-  <div class="panel">
-    <h3>Live data connections (Google) <span id="connStatus" class="pill">…</span></h3>
-    <div id="connBody">Loading…</div>
-  </div>
+    <!-- ===== Settings ===== -->
+    <section class="view" id="view-settings">
+      <div class="container">
+        <div class="page-head">
+          <h2>Settings</h2>
+          <p>Connect your data sources and set defaults.</p>
+        </div>
+        <div class="panel">
+          <h3>Connected data (Google) <span id="connStatus" class="pill">…</span></h3>
+          <div id="connBody">Loading…</div>
+        </div>
+      </div>
+    </section>
 
-  <div id="error"></div>
-  <div id="process"></div>
-  <div id="summary"></div>
-  <div id="sections"></div>
-
-  <div id="actions" style="display:none">
-    <button id="learnBtn">Approve &amp; Learn</button>
-    <button id="copyBtn" class="secondary">Copy final .md</button>
-    <button id="downloadBtn" class="secondary">Download .md</button>
   </div>
-
-  <div class="panel">
-    <h3>What it has learned
-      <span id="learnedCount" class="pill">…</span>
-      <span id="exampleCount" class="pill alt">…</span>
-    </h3>
-    <div id="rules">Loading…</div>
-  </div>
-</main>
+</div>
 
 <script>
 const $ = (id) => document.getElementById(id);
 let lastMeetingSummary = "";
+let lastConnectors = null;
+let lastApplied = {};   // the trace from the most recent generation (examples/context)
 
-// Grow a textarea to fit all its content so the whole section is visible.
-function autosize(ta) {
-  ta.style.height = "auto";
-  ta.style.height = (ta.scrollHeight + 4) + "px";
+/* ---------------- View routing ---------------- */
+const viewLoaders = {
+  plans: () => loadPlans(),
+  context: () => { loadLessons(); renderRecentChips($("recentChips2")); },
+  settings: () => loadConnectors(),
+};
+function showView(name) {
+  document.querySelectorAll(".view").forEach((v) => v.classList.remove("active"));
+  document.querySelectorAll(".nav a").forEach((a) => a.classList.remove("active"));
+  const view = $("view-" + name);
+  const nav = document.querySelector(`.nav a[data-view="${name}"]`);
+  if (view) view.classList.add("active");
+  if (nav) nav.classList.add("active");
+  if (viewLoaders[name]) viewLoaders[name]();
+  window.scrollTo(0, 0);
+}
+document.querySelectorAll(".nav a").forEach((a) =>
+  a.addEventListener("click", () => showView(a.dataset.view)));
+
+/* ---------------- Helpers ---------------- */
+function autosize(ta) { ta.style.height = "auto"; ta.style.height = (ta.scrollHeight + 4) + "px"; }
+
+// Parse a person's plain-text goals section into styled HTML with clear hierarchy:
+// numbered badges, bold titles, point chips, and labeled Success/Dependencies/Risks.
+function renderGoalsPreview(text) {
+  const lines = (text || "").split("\n");
+  const head = [];
+  const goals = [];
+  let cur = null;
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    const m = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (m) { cur = { num: m[1], titleLine: m[2], body: [] }; goals.push(cur); }
+    else if (cur) { cur.body.push(line); }
+    else { head.push(line); }
+  }
+  let html = "";
+  head.forEach((h) => {
+    const t = h.trim();
+    if (!t) return;
+    if (/^kaizen:/i.test(t)) {
+      html += `<div class="gp-kaizen"><span class="gp-kaizen-tag">Kaizen</span>${escapeHtml(t.replace(/^kaizen:\s*/i, ""))}</div>`;
+    } else if (/__\s*\/\s*[\d.]+/.test(t)) {
+      const s = t.match(/__\s*\/\s*([\d.]+)/);
+      html += `<div class="gp-score">Self-grade <b>__ / ${s ? s[1] : ""}</b></div>`;
+    } else {
+      html += `<div class="gp-desc gp-desc-top">${escapeHtml(t)}</div>`;
+    }
+  });
+  goals.forEach((g) => {
+    const pm = g.titleLine.match(/^(.*?)\s*\(([\d.]+)\s*points?\)\s*$/i);
+    const title = pm ? pm[1] : g.titleLine;
+    const pts = pm ? pm[2] : null;
+    html += `<div class="gp-goal"><div class="gp-goal-head">`
+      + `<span class="gp-num">${escapeHtml(g.num)}</span>`
+      + `<span class="gp-title">${escapeHtml(title)}</span>`
+      + (pts ? `<span class="gp-pts">${pts} pt${pts === "1" ? "" : "s"}</span>` : "")
+      + `</div>`;
+    g.body.forEach((b) => {
+      const t = b.trim();
+      if (!t) return;
+      if (/^mitigation:/i.test(t)) {
+        html += `<div class="gp-mit"><b>Mitigation:</b> ${escapeHtml(t.replace(/^mitigation:\s*/i, ""))}</div>`;
+      } else if (/^-\s+/.test(t)) {
+        html += `<div class="gp-bullet">${escapeHtml(t.replace(/^-\s+/, ""))}</div>`;
+      } else if (/^success criteria:/i.test(t)) {
+        html += `<div class="gp-label">Success criteria</div><div class="gp-val">${escapeHtml(t.replace(/^success criteria:\s*/i, ""))}</div>`;
+      } else if (/^dependencies:?$/i.test(t)) {
+        html += `<div class="gp-label">Dependencies</div>`;
+      } else if (/^risks:?$/i.test(t)) {
+        html += `<div class="gp-label gp-label-risk">Risks</div>`;
+      } else {
+        html += `<div class="gp-desc">${escapeHtml(t)}</div>`;
+      }
+    });
+    html += `</div>`;
+  });
+  return html || `<div class="gp-desc">${escapeHtml(text || "")}</div>`;
+}
+
+/* ---------------- Editable section model ----------------
+   Parse a person's plain-text section into a structured model, render it as an
+   inline-editable styled view, and serialize it straight back to the canonical
+   text format. The hidden textarea always holds serialize(model), so the rest of
+   the app (status, copy, download, learning) keeps reading one source of truth. */
+function parseSection(text) {
+  const lines = (text || "").split("\n");
+  const head = [], goals = [];
+  let cur = null;
+  for (const raw of lines) {
+    const line = raw.replace(/\s+$/, "");
+    const m = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (m) {
+      const pm = m[2].match(/^(.*?)\s*\(([\d.]+)\s*points?\)\s*$/i);
+      cur = { title: pm ? pm[1] : m[2], pts: pm ? pm[2] : null, body: [] };
+      goals.push(cur);
+      continue;
+    }
+    const t = line.trim();
+    if (!t) continue;                                  // blanks are re-added on serialize
+    if (cur) {
+      if (/^mitigation:/i.test(t)) cur.body.push({ kind: "mitigation", text: t.replace(/^mitigation:\s*/i, "") });
+      else if (/^-\s+/.test(t)) cur.body.push({ kind: "bullet", text: t.replace(/^-\s+/, "") });
+      else if (/^success criteria:/i.test(t)) cur.body.push({ kind: "success", text: t.replace(/^success criteria:\s*/i, "") });
+      else if (/^dependencies:?$/i.test(t)) cur.body.push({ kind: "depsHeader", text: "" });
+      else if (/^risks:?$/i.test(t)) cur.body.push({ kind: "risksHeader", text: "" });
+      else cur.body.push({ kind: "desc", text: t });
+    } else {
+      if (/^kaizen:/i.test(t)) head.push({ kind: "kaizen", text: t.replace(/^kaizen:\s*/i, "") });
+      else if (/__\s*\/\s*[\d.]+/.test(t)) head.push({ kind: "score", text: t });
+      else head.push({ kind: "desc", text: t });
+    }
+  }
+  return { head, goals };
+}
+
+function serializeModel(mo) {
+  const out = [];
+  mo.head.forEach((h) => out.push(h.kind === "kaizen" ? `Kaizen: ${h.text}` : h.text));
+  mo.goals.forEach((g, i) => {
+    out.push("");
+    const pts = (g.pts != null && g.pts !== "") ? ` (${g.pts} point${g.pts === "1" ? "" : "s"})` : "";
+    out.push(`${i + 1}. ${g.title}${pts}`);
+    g.body.forEach((b) => {
+      if (b.kind === "bullet") out.push(`- ${b.text}`);
+      else if (b.kind === "success") out.push(`Success criteria: ${b.text}`);
+      else if (b.kind === "depsHeader") out.push("Dependencies:");
+      else if (b.kind === "risksHeader") out.push("Risks:");
+      else if (b.kind === "mitigation") out.push(`  Mitigation: ${b.text}`);
+      else out.push(b.text);
+    });
+  });
+  return out.join("\n").replace(/^\n+/, "").replace(/\s+$/, "");
+}
+
+function mkEditable(tag, className, text, oninput) {
+  const el = document.createElement(tag);
+  el.className = className;
+  el.contentEditable = "true";
+  el.spellcheck = false;
+  el.textContent = text;
+  el.addEventListener("input", () => oninput(el.textContent.replace(/ /g, " ")));
+  // Single-line leaves: Enter commits (blurs) instead of injecting structure.
+  el.addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); el.blur(); } });
+  // Paste plain text only — never let pasted HTML into the structure.
+  el.addEventListener("paste", (e) => {
+    e.preventDefault();
+    const t = ((e.clipboardData || window.clipboardData).getData("text") || "").replace(/\s+/g, " ");
+    document.execCommand("insertText", false, t);
+  });
+  return el;
+}
+
+function firstLabelIndex(body) {
+  for (let i = 0; i < body.length; i++) {
+    const k = body[i].kind;
+    if (k === "success" || k === "depsHeader" || k === "risksHeader" || k === "mitigation") return i;
+  }
+  return body.length;
+}
+
+function renderBodyLine(g, b, bi, commit, rerender) {
+  if (b.kind === "depsHeader") {
+    const l = document.createElement("div"); l.className = "gp-label"; l.textContent = "Dependencies"; return l;
+  }
+  if (b.kind === "risksHeader") {
+    const l = document.createElement("div"); l.className = "gp-label gp-label-risk"; l.textContent = "Risks"; return l;
+  }
+  if (b.kind === "success") {
+    const wrap = document.createElement("div");
+    const l = document.createElement("div"); l.className = "gp-label"; l.textContent = "Success criteria";
+    const v = mkEditable("div", "gp-val gp-ed", b.text, (t) => { b.text = t; commit(); });
+    wrap.append(l, v); return wrap;
+  }
+  if (b.kind === "mitigation") {
+    const d = document.createElement("div"); d.className = "gp-mit";
+    const lab = document.createElement("b"); lab.textContent = "Mitigation: ";
+    const v = mkEditable("span", "gp-ed", b.text, (t) => { b.text = t; commit(); });
+    d.append(lab, v); return d;
+  }
+  if (b.kind === "bullet") {
+    const d = document.createElement("div"); d.className = "gp-bullet";
+    const v = mkEditable("span", "gp-ed", b.text, (t) => { b.text = t; commit(); });
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "gp-bullet-del"; del.title = "Remove this line"; del.textContent = "✕";
+    del.addEventListener("click", () => { g.body.splice(bi, 1); commit(); rerender(); });
+    d.append(v, del); return d;
+  }
+  return mkEditable("div", "gp-desc gp-ed", b.text, (t) => { b.text = t; commit(); });
+}
+
+function renderEditableSection(model, mount, commit) {
+  const rerender = () => renderEditableSection(model, mount, commit);
+  mount.innerHTML = "";
+  model.head.forEach((h) => {
+    if (h.kind === "kaizen") {
+      const d = document.createElement("div"); d.className = "gp-kaizen";
+      const tag = document.createElement("span"); tag.className = "gp-kaizen-tag"; tag.textContent = "Kaizen";
+      d.append(tag, mkEditable("span", "gp-ed", h.text, (t) => { h.text = t; commit(); }));
+      mount.appendChild(d);
+    } else if (h.kind === "score") {
+      mount.appendChild(mkEditable("div", "gp-score gp-ed", h.text, (t) => { h.text = t; commit(); }));
+    } else {
+      mount.appendChild(mkEditable("div", "gp-desc gp-desc-top gp-ed", h.text, (t) => { h.text = t; commit(); }));
+    }
+  });
+  model.goals.forEach((g, gi) => {
+    const goalEl = document.createElement("div"); goalEl.className = "gp-goal";
+    const headEl = document.createElement("div"); headEl.className = "gp-goal-head";
+    const num = document.createElement("span"); num.className = "gp-num"; num.textContent = gi + 1;
+    const title = mkEditable("span", "gp-title gp-ed", g.title, (t) => { g.title = t; commit(); });
+    const pts = document.createElement("span"); pts.className = "gp-pts";
+    pts.append(mkEditable("span", "gp-ed", g.pts || "", (t) => { g.pts = t.replace(/[^\d.]/g, ""); commit(); }),
+               document.createTextNode(" pts"));
+    const del = document.createElement("button");
+    del.type = "button"; del.className = "goal-del"; del.title = "Remove this goal"; del.textContent = "✕";
+    del.addEventListener("click", () => { model.goals.splice(gi, 1); commit(); rerender(); });
+    headEl.append(num, title, pts, del);
+    goalEl.appendChild(headEl);
+    g.body.forEach((b, bi) => goalEl.appendChild(renderBodyLine(g, b, bi, commit, rerender)));
+    const addSub = document.createElement("button");
+    addSub.type = "button"; addSub.className = "gp-add-sub"; addSub.textContent = "＋ add point";
+    addSub.addEventListener("click", () => {
+      g.body.splice(firstLabelIndex(g.body), 0, { kind: "bullet", text: "" });
+      commit(); rerender();
+    });
+    goalEl.appendChild(addSub);
+    mount.appendChild(goalEl);
+  });
+  const addGoal = document.createElement("button");
+  addGoal.type = "button"; addGoal.className = "gp-add-goal"; addGoal.textContent = "＋ Add goal";
+  addGoal.addEventListener("click", () => {
+    model.goals.push({ title: "New goal", pts: "1",
+      body: [{ kind: "desc", text: "" }, { kind: "success", text: "" }] });
+    commit(); rerender();
+  });
+  mount.appendChild(addGoal);
 }
 
 function setBusy(btn, busy, label) {
@@ -237,61 +794,54 @@ function setBusy(btn, busy, label) {
   btn.innerHTML = busy ? `<span class="spinner"></span>${label}` : label;
 }
 
-function renderRules(rules, exampleCount) {
-  rules = rules || [];
-  $("learnedCount").textContent = rules.length + " rule" + (rules.length === 1 ? "" : "s");
-  $("exampleCount").textContent = (exampleCount || 0) + " example" + (exampleCount === 1 ? "" : "s");
-  const box = $("rules");
+/* ---------------- Connected-source chips ---------------- */
+function renderConnChips(d) {
+  const box = $("connChips");
   box.innerHTML = "";
-  if (!rules.length) {
-    box.innerHTML = '<p class="note">Nothing learned yet — edit or reject a section, then Approve &amp; Learn.</p>';
+  const connected = !!(d && d.connected);
+  const sources = [
+    ["Calendar", connected], ["Gmail", connected], ["Drive", connected],
+  ];
+  sources.forEach(([name, on]) => {
+    const c = document.createElement("span");
+    c.className = "chip clickable " + (on ? "ok" : "off");
+    c.innerHTML = `<span class="dot"></span>${name} ${on ? '<span class="tick">✓</span>' : '<span class="note">connect</span>'}`;
+    c.addEventListener("click", () => showView("settings"));
+    box.appendChild(c);
+  });
+  // Learned Context is always on.
+  const lc = document.createElement("span");
+  lc.className = "chip ok clickable";
+  lc.innerHTML = `<span class="dot"></span>Learned Context <span class="tick">✓</span>`;
+  lc.addEventListener("click", () => showView("context"));
+  box.appendChild(lc);
+}
+
+function recentItems(d) {
+  if (!d) return [];
+  const items = [];
+  (d.calendar || []).slice(0, 3).forEach((e) => items.push("📅 " + (e.summary || "Event")));
+  (d.drive || []).slice(0, 3).forEach((f) => items.push("📄 " + (f.name || "File")));
+  (d.gmail || []).slice(0, 2).forEach((m) => items.push("✉ " + (m.subject || "Email")));
+  return items;
+}
+function renderRecentChips(box) {
+  box = box || $("recentChips");
+  const items = recentItems(lastConnectors);
+  box.innerHTML = "";
+  if (!items.length) {
+    box.innerHTML = '<span class="note">Nothing synced yet — connect a source in Settings, then Sync.</span>';
     return;
   }
-  rules.forEach((rule) => {
-    const row = document.createElement("div");
-    row.className = "rule-row";
-    const span = document.createElement("span");
-    if (rule.person) {
-      const chip = document.createElement("span");
-      chip.className = "who";
-      chip.textContent = rule.person;
-      span.appendChild(chip);
-    }
-    span.appendChild(document.createTextNode(rule.text));
-    const del = document.createElement("button");
-    del.className = "rule-del";
-    del.textContent = "✕";
-    del.title = "Delete this rule";
-    del.addEventListener("click", () => deleteRule(rule.id));
-    row.append(span, del);
-    box.appendChild(row);
+  items.forEach((t) => {
+    const c = document.createElement("span");
+    c.className = "chip";
+    c.textContent = t;
+    box.appendChild(c);
   });
 }
 
-async function loadLessons() {
-  try {
-    const r = await fetch("/api/lessons");
-    const d = await r.json();
-    renderRules(d.rules, d.example_count);
-  } catch (e) {
-    $("rules").textContent = "Could not load lessons.";
-  }
-}
-
-async function deleteRule(id) {
-  try {
-    const r = await fetch("/api/lessons/delete", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
-    });
-    const d = await r.json();
-    if (r.ok) renderRules(d.rules, d.example_count);
-  } catch (e) {
-    $("error").textContent = "Could not delete rule.";
-  }
-}
-
+/* ---------------- Generate ---------------- */
 function makeCard(section) {
   const card = document.createElement("div");
   card.className = "card";
@@ -319,26 +869,82 @@ function makeCard(section) {
   controls.append(approveBtn, rejectBtn);
   head.append(name, controls);
 
+  // Goals: an inline-editable styled view is the primary surface — edit titles,
+  // points, bullets, success criteria directly in place, and add/remove goals.
+  // A raw-text textarea stays as a fallback. The textarea always holds
+  // serialize(model), so it remains the one canonical value the app reads.
   const ta = document.createElement("textarea");
-  ta.value = section.text;
+  ta.style.display = "none";
+  const preview = document.createElement("div");
+  preview.className = "gp";
+  const taWrap = document.createElement("div");
+  taWrap.className = "ta-wrap";
+  taWrap.append(preview, ta);
 
-  // Optional "why" — only shown once a section is edited or rejected. A reason
-  // lets a sizing/ownership change become a general rule; without one, the edit
-  // is kept as a one-off example instead of an invented rule.
-  const reason = document.createElement("input");
-  reason.type = "text";
-  reason.className = "reason-input";
-  reason.placeholder = "Why this change? (optional — turns it into a rule it can reuse)";
-  reason.style.display = "none";
+  let model = parseSection(section.text);
+  const normalized = serializeModel(model);
+  ta.value = normalized;
+  card.dataset.original = normalized;        // diff inline edits against this baseline
+
+  function commit() { ta.value = serializeModel(model); refreshStatus(); }
+  function renderModel() { renderEditableSection(model, preview, commit); }
+  renderModel();
+
+  const editHint = document.createElement("div");
+  editHint.className = "gp-edit-hint";
+  editHint.textContent = "Tip: click any line to edit it. Hover a goal or bullet for ✕ to remove.";
+
+  // Editing a long, clamped card auto-expands it so nothing is hidden mid-edit.
+  preview.addEventListener("focusin", () => {
+    if (preview.classList.contains("clamped")) {
+      preview.classList.remove("clamped"); card.classList.remove("collapsed");
+      expandBtn.style.display = "none";
+    }
+  });
+
+  // Buttons under the goals: Edit raw text (escape hatch), Show full (expand clamp).
+  const viewBar = document.createElement("div");
+  viewBar.className = "view-bar";
+  const editBtn = document.createElement("button");
+  editBtn.type = "button";
+  editBtn.className = "expand-btn";
+  editBtn.textContent = "Edit raw text";
+  editBtn.addEventListener("click", () => {
+    const editingRaw = ta.style.display !== "none";
+    if (editingRaw) {
+      ta.style.display = "none"; preview.style.display = "";
+      model = parseSection(ta.value); renderModel();   // fold raw edits back into the styled view
+      editBtn.textContent = "Edit raw text";
+      applyClamp();
+    } else {
+      preview.style.display = "none"; ta.style.display = "";
+      card.classList.remove("collapsed");
+      expandBtn.style.display = "none";
+      ta.classList.remove("clamped"); autosize(ta); editBtn.textContent = "Done (raw)";
+      ta.focus();
+    }
+  });
+  const expandBtn = document.createElement("button");
+  expandBtn.type = "button";
+  expandBtn.className = "expand-btn show-full-btn";
+  expandBtn.style.display = "none";
+  expandBtn.addEventListener("click", () => {
+    if (preview.classList.contains("clamped")) {
+      preview.classList.remove("clamped"); card.classList.remove("collapsed");
+      expandBtn.textContent = "Collapse ▴";
+    } else {
+      preview.classList.add("clamped"); card.classList.add("collapsed");
+      expandBtn.textContent = "Show full ▾";
+      card.scrollIntoView({ block: "nearest", behavior: "smooth" });
+    }
+  });
+  viewBar.append(editBtn, expandBtn);
 
   function refreshStatus() {
-    if (card.dataset.status === "rejected") {
-      tag.textContent = "rejected"; reason.style.display = ""; return;
-    }
+    if (card.dataset.status === "rejected") { tag.textContent = "rejected"; return; }
     const edited = ta.value.trim() !== card.dataset.original.trim();
     card.dataset.status = edited ? "edited" : "approved";
     tag.textContent = edited ? "edited" : "";
-    reason.style.display = edited ? "" : "none";
   }
   ta.addEventListener("input", () => { refreshStatus(); autosize(ta); });
 
@@ -346,20 +952,144 @@ function makeCard(section) {
     card.classList.remove("rejected");
     approveBtn.classList.add("active-approve");
     rejectBtn.classList.remove("active-reject");
-    ta.disabled = false;
-    refreshStatus();
+    ta.disabled = false; refreshStatus();
   });
   rejectBtn.addEventListener("click", () => {
     card.classList.add("rejected");
     rejectBtn.classList.add("active-reject");
     approveBtn.classList.remove("active-approve");
-    card.dataset.status = "rejected";
-    tag.textContent = "rejected";
-    reason.style.display = "";
+    card.dataset.status = "rejected"; tag.textContent = "rejected";
   });
 
-  card.append(head, ta, reason);
+  // ── The single "Tell Agilow what to change" box (remove / reword / add / redo) ──
+  const changeReasoning = document.createElement("div");
+  changeReasoning.className = "regen-reasoning";
+  changeReasoning.style.display = "none";
+
+  const change = document.createElement("details");
+  change.className = "add-block change-block";
+  const changeSummary = document.createElement("summary");
+  changeSummary.innerHTML =
+    `Tell Agilow what to change <button type="button" class="info-btn" title="What can I do here?">i</button>`;
+  const help = document.createElement("div");
+  help.className = "change-help";
+  help.style.display = "none";
+  help.innerHTML =
+    `<div class="help-title">Say what you want — type or dictate (Wispr Flow). It works out the rest:</div>`
+    + "<ul>"
+    + `<li><b>Remove</b> — “drop goal 3” · “remove the backlog goal”</li>`
+    + `<li><b>Reword / fix</b> — “make them all measurable with dates” · “shorten goal 1”</li>`
+    + `<li><b>Add</b> — “also add: finish the case study copy by Friday”</li>`
+    + `<li><b>Redo</b> — “fewer goals, focus on Journey delivery”</li>`
+    + "</ul>"
+    + `<div class="note">Only what you mention changes — everything else stays. Tick “Remember this” to make it a lasting preference for ${escapeHtml(section.name)}.</div>`;
+  const changeInput = document.createElement("textarea");
+  changeInput.className = "add-dump";
+  changeInput.placeholder =
+    `e.g. remove goal 3, make the rest measurable, and add the demo prep…`;
+  const rememberLabel = document.createElement("label");
+  rememberLabel.className = "regen-save";
+  const rememberCheck = document.createElement("input");
+  rememberCheck.type = "checkbox";
+  rememberLabel.append(rememberCheck, document.createTextNode(" Remember this for next time"));
+  const changeRow = document.createElement("div");
+  changeRow.className = "row";
+  const changeBtn = document.createElement("button");
+  changeBtn.textContent = "Apply change";
+  const changeErr = document.createElement("span");
+  changeErr.className = "note bad-text";
+  changeRow.append(changeBtn, changeErr);
+
+  const infoBtn = changeSummary.querySelector(".info-btn");
+  infoBtn.addEventListener("click", (e) => {
+    e.preventDefault(); e.stopPropagation();      // don't toggle the <details>
+    change.open = true;
+    help.style.display = help.style.display === "none" ? "" : "none";
+  });
+
+  changeBtn.addEventListener("click", async () => {
+    const instr = changeInput.value.trim();
+    changeErr.textContent = "";
+    if (!instr) { changeErr.textContent = "Say what to change first."; return; }
+    changeBtn.disabled = true;
+    const lbl = changeBtn.textContent;
+    changeBtn.innerHTML = '<span class="spinner"></span>Applying…';
+    try {
+      const res = await fetch("/api/change-section", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ name: card.dataset.name, section: ta.value,
+          instruction: instr, save_pref: rememberCheck.checked }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "Change failed");
+      ta.value = (data.section || "").trim();
+      ta.classList.remove("clamped"); card.classList.remove("collapsed");
+      model = parseSection(ta.value); renderModel();   // reflect the change in the styled view
+      refreshStatus(); autosize(ta);
+      if (ta.style.display === "none") applyClamp();   // re-clamp preview when not editing
+      changeReasoning.textContent = (data.reasoning || "");
+      changeReasoning.style.display = "";
+      changeInput.value = "";
+      if (data.saved_rule) { rememberCheck.checked = false; loadLessons(); }
+      change.open = false;
+    } catch (e) { changeErr.textContent = e.message; }
+    finally { changeBtn.disabled = false; changeBtn.textContent = lbl; }
+  });
+  change.append(changeSummary, help, changeInput, rememberLabel, changeRow);
+
+  // Transparency: the full thinking that shaped this person's goals — their
+  // preferences + team-wide + past edits referenced + context sources pulled.
+  const trace = document.createElement("details");
+  trace.className = "add-block trace-block";
+  const traceSummary = document.createElement("summary");
+  traceSummary.textContent = "How Agilow built this";
+  const traceBody = document.createElement("div");
+  traceBody.className = "trace-body";
+  const own = prefsFor(section.name), gen = generalPrefs();
+  const exForPerson = (lastApplied.examples || []).filter((e) => (e.name || "") === section.name);
+  const sources = lastApplied.context_sources || [];
+  let html =
+    `<div class="trace-label">${escapeHtml(section.name)}'s preferences</div>`
+    + (own.length ? "<ul>" + own.map((p) => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>"
+                  : '<div class="note">None yet — used team defaults.</div>')
+    + `<div class="trace-label">Team-wide preferences</div>`
+    + (gen.length ? "<ul>" + gen.map((p) => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>"
+                  : '<div class="note">None.</div>');
+  if (exForPerson.length) {
+    html += `<div class="trace-label">Past edits referenced</div><ul>`
+      + exForPerson.slice(0, 3).map((e) => `<li>${escapeHtml((e.after || "").slice(0, 90))}…</li>`).join("") + "</ul>";
+  }
+  if (sources.length) {
+    html += `<div class="trace-label">Context sources pulled</div>`
+      + `<div class="note">${sources.map((s) => escapeHtml(s)).join(" · ")}</div>`;
+  }
+  html += `<div class="trace-edit-note note">Edit these in <a href="#" class="trace-link">Learned Context</a>.</div>`;
+  traceBody.innerHTML = html;
+  traceBody.querySelector(".trace-link").addEventListener("click", (e) => { e.preventDefault(); showView("context"); });
+  trace.append(traceSummary, traceBody);
+
+  card.append(head, editHint, taWrap, viewBar, change, changeReasoning, trace);
   return card;
+}
+
+// After the result view is visible (so heights measure correctly), size each
+// card to its content and clamp the long ones to a preview with a toggle.
+function applyClamp() {
+  document.querySelectorAll(".card").forEach((card) => {
+    const preview = card.querySelector(".gp");
+    const btn = card.querySelector(".show-full-btn");
+    if (!preview || !btn) return;
+    preview.classList.remove("clamped");
+    if (preview.scrollHeight > 340) {
+      preview.classList.add("clamped");
+      card.classList.add("collapsed");
+      btn.style.display = "";
+      btn.textContent = "Show full ▾";
+    } else {
+      card.classList.remove("collapsed");
+      btn.style.display = "none";
+    }
+  });
 }
 
 function collectItems() {
@@ -381,50 +1111,154 @@ function buildFinalDoc() {
   return header + "\n\n" + parts.join("\n\n---\n\n") + "\n";
 }
 
-async function generate() {
-  $("error").textContent = "";
-  const transcript = $("transcript").value.trim();
-  if (!transcript) { $("error").textContent = "Paste a transcript first."; return; }
-  setBusy($("generateBtn"), true, "Generating…");
+// Convert one person's plain-text section into semantic HTML that Google Docs
+// maps to real formatting on paste: bold name/score + kaizen, bold numbered
+// goal titles, real bullet lists, and bold Success/Dependencies/Risks labels.
+function sectionToHtml(text) {
+  const lines = (text || "").split("\n");
+  let html = "", bullets = [], started = false;
+  const flush = () => {
+    if (bullets.length) {
+      html += "<ul>" + bullets.map((b) => `<li>${escapeHtml(b)}</li>`).join("") + "</ul>";
+      bullets = [];
+    }
+  };
+  for (const raw of lines) {
+    const t = raw.trim();
+    if (/^-\s+/.test(t)) { bullets.push(t.replace(/^-\s+/, "")); continue; }
+    flush();
+    if (!t) continue;
+    const goal = t.match(/^(\d+)\.\s+(.*)$/);
+    if (goal) {
+      const pm = goal[2].match(/^(.*?)\s*\(([\d.]+)\s*points?\)\s*$/i);
+      const title = pm ? pm[1] : goal[2];
+      const pts = pm ? pm[2] : null;
+      html += `<p><b>${escapeHtml(goal[1])}. ${escapeHtml(title)}</b>`
+        + (pts ? `  (${escapeHtml(pts)} point${pts === "1" ? "" : "s"})` : "") + "</p>";
+      started = true;
+    } else if (/^kaizen:/i.test(t)) {
+      html += `<p><b>Kaizen:</b> ${escapeHtml(t.replace(/^kaizen:\s*/i, ""))}</p>`;
+    } else if (/^mitigation:/i.test(t)) {
+      html += `<p style="margin-left:24px"><i>Mitigation:</i> ${escapeHtml(t.replace(/^mitigation:\s*/i, ""))}</p>`;
+    } else if (/^(success criteria|dependencies|risks):?/i.test(t)) {
+      const m = t.match(/^([^:]+):\s*(.*)$/);
+      html += `<p><b>${escapeHtml(m[1])}:</b>${m[2] ? " " + escapeHtml(m[2]) : ""}</p>`;
+    } else if (!started && /__\s*\/\s*[\d.]+/.test(t)) {
+      html += `<p><b>${escapeHtml(t)}</b></p>`;   // the "Name: __ / total" line
+    } else {
+      html += `<p>${escapeHtml(t)}</p>`;
+    }
+  }
+  flush();
+  return html;
+}
+
+// The whole doc as HTML (header + each non-rejected person), people separated
+// by a blank line so the paste reads as distinct blocks in the doc.
+function buildFinalHtml() {
+  const header = $("sections").dataset.header || "";
+  const headHtml = header.split("\n").map((l) => l.trim()).filter(Boolean).map((l) => {
+    if (/^sprint goals/i.test(l)) return `<h2>${escapeHtml(l)}</h2>`;
+    const m = l.match(/^([^:]+):\s*(.*)$/);
+    return m ? `<p><b>${escapeHtml(m[1])}:</b> ${escapeHtml(m[2])}</p>` : `<p>${escapeHtml(l)}</p>`;
+  }).join("");
+  const people = [...document.querySelectorAll(".card")]
+    .filter((c) => c.dataset.status !== "rejected")
+    .map((c) => `<div>${sectionToHtml(c.querySelector("textarea").value)}</div>`);
+  return headHtml + people.join("<p><br></p>");
+}
+
+// Legacy rich-text copy: select a hidden rendered node and execCommand("copy").
+// Works in non-secure contexts (e.g. the http tunnel) where navigator.clipboard
+// is unavailable — and still carries formatting into Google Docs.
+function legacyCopyHtml(html) {
+  const div = document.createElement("div");
+  div.contentEditable = "true";
+  div.style.cssText = "position:fixed;left:-9999px;top:0;opacity:0;";
+  div.innerHTML = html;
+  document.body.appendChild(div);
+  const range = document.createRange();
+  range.selectNodeContents(div);
+  const sel = window.getSelection();
+  sel.removeAllRanges(); sel.addRange(range);
+  const ok = document.execCommand("copy");
+  sel.removeAllRanges(); document.body.removeChild(div);
+  if (!ok) throw new Error("execCommand copy failed");
+}
+
+function renderSections(d) {
+  lastMeetingSummary = d.meeting_summary || "";
+  lastApplied = d.applied || {};
+  $("resultTitle").textContent = (d.header || "Sprint goals").split("\n")[0];
+  $("summary").textContent = d.meeting_summary || "";
+  $("process").textContent = d.process_improvement ? "Process improvement (team): " + d.process_improvement : "";
+  $("sections").dataset.header = d.header || "";
   $("sections").innerHTML = "";
-  $("actions").style.display = "none";
-  $("summary").textContent = "";
-  $("process").textContent = "";
+  if (!d.sections || !d.sections.length) {
+    $("sections").innerHTML = '<p class="note">No people with goals were extracted.</p>';
+    $("actions").style.display = "none";
+    return;
+  }
+  d.sections.forEach((s) => $("sections").appendChild(makeCard(s)));
+  $("actions").style.display = "flex";
+}
+
+// Live "AI is thinking" trace: one step per team member showing the preferences
+// being applied to them, revealed in sequence while generation runs.
+function renderProcessing(names) {
+  const box = $("sections");
+  box.dataset.header = ""; box.innerHTML = "";
+  const g = generalPrefs().length;
+  const intro = document.createElement("div");
+  intro.className = "proc-step"; intro.style.animationDelay = "0s";
+  intro.innerHTML = `<div class="proc-head"><span class="spinner dark"></span><b>Reading transcript &amp; pulling your context</b></div>`
+    + `<div class="proc-body">Calendar · North Star · email · Drive, plus ${g} team-wide preference${g === 1 ? "" : "s"}</div>`;
+  box.appendChild(intro);
+  names.forEach((n, i) => {
+    const prefs = prefsFor(n);
+    const list = prefs.length
+      ? "<ul>" + prefs.map((p) => `<li>${escapeHtml(p)}</li>`).join("") + "</ul>"
+      : '<div class="note">No personal preferences yet — using team defaults.</div>';
+    const step = document.createElement("div");
+    step.className = "proc-step"; step.style.animationDelay = (0.4 + i * 0.45) + "s";
+    step.innerHTML = `<div class="proc-head"><span class="spinner dark"></span><b>Generating ${escapeHtml(n)}'s goals</b></div>`
+      + `<div class="proc-body">Applying ${escapeHtml(n)}'s preferences:${list}</div>`;
+    box.appendChild(step);
+  });
+}
+
+async function generate() {
+  $("genError").textContent = "";
+  const transcript = $("transcript").value.trim();
+  if (!transcript) { $("genError").textContent = "Paste your Granola output first."; return; }
+  setBusy($("generateBtn"), true, "Generating…");
+  // Switch to the result screen and show the live per-member processing trace.
+  $("appliedNote").textContent = ""; $("process").textContent = ""; $("summary").textContent = "";
+  $("error").textContent = ""; $("actions").style.display = "none";
+  $("resultTitle").textContent = "Generating plan…";
+  renderProcessing(teamNames());
+  showView("result");
   try {
     const r = await fetch("/api/generate", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        transcript,
-        input_mode: $("inputMode").value,
-        sprint_label: $("sprintLabel").value,
-        team: $("team").value,
+        transcript, input_mode: $("inputMode").value,
+        sprint_label: $("sprintLabel").value, team: $("team").value,
       }),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Generation failed.");
-    lastMeetingSummary = d.meeting_summary || "";
-    $("summary").textContent = d.meeting_summary || "";
-    $("process").textContent = d.process_improvement
-      ? "Process improvement (team): " + d.process_improvement : "";
-    $("sections").dataset.header = d.header || "";
     const note = [];
     if (d.context_applied) note.push("project context applied");
     if (d.lessons_applied) note.push("learned corrections applied");
     if (d.examples_applied) note.push(`${d.examples_applied} past example${d.examples_applied === 1 ? "" : "s"} applied`);
     $("appliedNote").textContent = note.length ? "✓ " + note.join(" · ") : "";
-    if (!d.sections.length) {
-      $("sections").innerHTML = '<p class="note">No people with goals were extracted from this transcript.</p>';
-    } else {
-      d.sections.forEach((s) => $("sections").appendChild(makeCard(s)));
-      document.querySelectorAll(".card textarea").forEach(autosize);
-      $("actions").style.display = "flex";
-    }
+    renderSections(d);
+    applyClamp();
   } catch (e) {
+    $("sections").innerHTML = ""; $("resultTitle").textContent = "Generation failed";
     $("error").textContent = e.message;
-  } finally {
-    setBusy($("generateBtn"), false, "Generate sprint goals");
-  }
+  } finally { setBusy($("generateBtn"), false, "✦ Generate Plan →"); }
 }
 
 async function learn() {
@@ -432,51 +1266,227 @@ async function learn() {
   setBusy($("learnBtn"), true, "Learning…");
   try {
     const r = await fetch("/api/feedback", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
+      method: "POST", headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ items: collectItems(), meeting_summary: lastMeetingSummary }),
     });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Feedback failed.");
     renderRules(d.rules, d.example_count);
-    const n = (d.added_rules || []).length;
-    const ex = d.new_examples || 0;
+    const n = (d.added_rules || []).length, ex = d.new_examples || 0;
     if (n) {
       const bits = [`${n} general rule${n === 1 ? "" : "s"}`];
       if (ex) bits.push(`${ex} example${ex === 1 ? "" : "s"}`);
-      $("appliedNote").innerHTML =
-        `<span class="ok">✓ Learned ${bits.join(" + ")}</span> <span class="note">— applied next generate.</span>`;
+      $("appliedNote").innerHTML = `<span class="ok">✓ Learned ${bits.join(" + ")}</span> <span class="note">— applied next generate.</span>`;
     } else if (ex) {
-      $("appliedNote").innerHTML =
-        `<span class="ok">✓ Saved ${ex} one-off example${ex === 1 ? "" : "s"}</span> ` +
-        `<span class="note">— no general rule from these (add a “why” on an edit to teach one).</span>`;
+      $("appliedNote").innerHTML = `<span class="ok">✓ Saved ${ex} one-off example${ex === 1 ? "" : "s"}</span> <span class="note">— add a “why” on an edit to teach a rule.</span>`;
     } else {
       $("appliedNote").innerHTML = `<span class="note">No edits or rejections to learn from.</span>`;
     }
+  } catch (e) { $("error").textContent = e.message; }
+  finally { setBusy($("learnBtn"), false, "✓ Approve & Learn"); }
+}
+
+async function copyFinal() {
+  const btn = $("copyBtn");
+  const html = buildFinalHtml();
+  const text = buildFinalDoc();
+  const reset = (msg, ms) => { btn.textContent = msg; setTimeout(() => (btn.textContent = "Copy for Google Doc"), ms); };
+  try {
+    if (navigator.clipboard && window.ClipboardItem) {
+      // Rich + plain together: Google Docs takes the HTML (formatted), plain-text
+      // editors take the text. This is what makes the paste come out formatted.
+      await navigator.clipboard.write([new ClipboardItem({
+        "text/html": new Blob([html], { type: "text/html" }),
+        "text/plain": new Blob([text], { type: "text/plain" }),
+      })]);
+    } else {
+      legacyCopyHtml(html);   // http / older browsers — still pastes formatted
+    }
+    reset("Copied ✓ — paste into your doc", 1800);
   } catch (e) {
-    $("error").textContent = e.message;
-  } finally {
-    setBusy($("learnBtn"), false, "Approve & Learn");
+    try { legacyCopyHtml(html); reset("Copied ✓ — paste into your doc", 1800); }
+    catch (_) { reset("Copy failed — use Download", 2200); }
   }
 }
-
-function copyFinal() {
-  navigator.clipboard.writeText(buildFinalDoc()).then(() => {
-    $("copyBtn").textContent = "Copied ✓";
-    setTimeout(() => ($("copyBtn").textContent = "Copy final .md"), 1500);
-  });
-}
-
 function downloadFinal() {
   const blob = new Blob([buildFinalDoc()], { type: "text/markdown" });
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = "sprint_goals.md";
-  a.click();
+  a.href = URL.createObjectURL(blob); a.download = "sprint_goals.md"; a.click();
   URL.revokeObjectURL(a.href);
 }
 
-// ----- Live data connections (Google) -----
+/* ---------------- Plans ---------------- */
+async function loadPlans() {
+  const box = $("planList");
+  try {
+    const d = await (await fetch("/api/plans")).json();
+    const plans = d.plans || [];
+    box.innerHTML = "";
+    if (!plans.length) { box.innerHTML = '<p class="empty-state">No plans yet — generate one from New Plan.</p>'; return; }
+    plans.forEach((p) => {
+      const row = document.createElement("div");
+      row.className = "plan-item";
+      const left = document.createElement("div");
+      left.innerHTML = `<div class="plan-title">${escapeHtml(p.title)}</div>`
+        + `<div class="plan-meta">${p.people_count} ${p.people_count === 1 ? "person" : "people"}`
+        + (p.summary ? " · " + escapeHtml(p.summary.slice(0, 80)) : "") + "</div>";
+      const date = document.createElement("div");
+      date.className = "plan-date";
+      date.textContent = p.date || "";
+      row.append(left, date);
+      row.addEventListener("click", () => openPlan(p.id));
+      box.appendChild(row);
+    });
+  } catch (e) { box.innerHTML = '<p class="empty-state bad-text">Could not load plans.</p>'; }
+}
+async function openPlan(id) {
+  try {
+    const d = await (await fetch("/api/plans/" + encodeURIComponent(id))).json();
+    if (d.error) throw new Error(d.error);
+    $("appliedNote").textContent = d.date ? `Reopened from ${d.date}` : "";
+    $("error").textContent = "";
+    renderSections(d);
+    showView("result");
+    applyClamp();
+  } catch (e) { alert("Could not open plan: " + e.message); }
+}
+
+/* ---------------- Learned Context ---------------- */
+let allRules = [];                       // cached preferences (drives the trace too)
+function teamNames() {
+  return ($("team").value || "").split(",").map((s) => s.trim()).filter(Boolean);
+}
+function prefsFor(name) { return allRules.filter((r) => r.person === name).map((r) => r.text); }
+function generalPrefs() { return allRules.filter((r) => !r.person).map((r) => r.text); }
+
+function prefRow(rule) {
+  const row = document.createElement("div");
+  row.className = "rule-row";
+  const span = document.createElement("span");
+  span.className = "rule-text";
+  span.textContent = rule.text;
+  const tools = document.createElement("span");
+  tools.className = "rule-tools";
+  const edit = document.createElement("button");
+  edit.className = "rule-edit"; edit.textContent = "✎"; edit.title = "Edit this preference";
+  const del = document.createElement("button");
+  del.className = "rule-del"; del.textContent = "✕"; del.title = "Delete this preference";
+  del.addEventListener("click", () => deleteRule(rule.id));
+  edit.addEventListener("click", () => {
+    const inp = document.createElement("input");
+    inp.className = "reason-input"; inp.value = rule.text; inp.style.flex = "1"; inp.style.marginTop = "0";
+    const save = document.createElement("button");
+    save.className = "secondary"; save.textContent = "Save";
+    const cancel = document.createElement("button");
+    cancel.className = "rule-del"; cancel.textContent = "✕"; cancel.title = "Cancel";
+    row.innerHTML = ""; row.append(inp, save, cancel); inp.focus();
+    save.addEventListener("click", async () => {
+      const t = inp.value.trim(); if (!t) return;
+      save.disabled = true;
+      await fetch("/api/lessons/update", { method: "POST",
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id: rule.id, text: t }) });
+      loadLessons();
+    });
+    cancel.addEventListener("click", () => loadLessons());
+  });
+  tools.append(edit, del);
+  row.append(span, tools);
+  return row;
+}
+
+function prefGroup(label, person) {
+  const wrap = document.createElement("div");
+  wrap.className = "pref-group";
+  const h = document.createElement("div");
+  h.className = "pref-group-head";
+  h.textContent = label;
+  wrap.appendChild(h);
+  const list = allRules.filter((r) => (r.person || null) === person);
+  if (!list.length) {
+    const e = document.createElement("p");
+    e.className = "note"; e.style.margin = "0 0 8px";
+    e.textContent = person ? `No personal preferences yet — ${label} uses the team defaults.`
+                           : "No team-wide preferences yet.";
+    wrap.appendChild(e);
+  }
+  list.forEach((r) => wrap.appendChild(prefRow(r)));
+  const addWrap = document.createElement("div");
+  addWrap.className = "pref-add";
+  const inp = document.createElement("input");
+  inp.className = "reason-input"; inp.style.marginTop = "0";
+  inp.placeholder = person ? `Add a preference for ${label}…` : "Add a team-wide preference…";
+  const btn = document.createElement("button");
+  btn.className = "secondary"; btn.textContent = "Add";
+  const submit = async () => {
+    const t = inp.value.trim(); if (!t) return;
+    btn.disabled = true;
+    await fetch("/api/lessons/add", { method: "POST",
+      headers: { "Content-Type": "application/json" }, body: JSON.stringify({ text: t, person }) });
+    inp.value = ""; loadLessons();
+  };
+  btn.addEventListener("click", submit);
+  inp.addEventListener("keydown", (e) => { if (e.key === "Enter") submit(); });
+  addWrap.append(inp, btn);
+  wrap.appendChild(addWrap);
+  return wrap;
+}
+
+function renderRules(rules, exampleCount) {
+  allRules = rules || [];
+  $("learnedCount").textContent = allRules.length + (allRules.length === 1 ? " preference" : " preferences");
+  if (exampleCount != null)
+    $("exampleCount").textContent = (exampleCount || 0) + (exampleCount === 1 ? " example" : " examples");
+  const box = $("rules");
+  box.innerHTML = "";
+  // One group for the whole team, then one per member, then any extra people.
+  const groups = [{ label: "Everyone", person: null }];
+  const seen = new Set();
+  teamNames().forEach((n) => { groups.push({ label: n, person: n }); seen.add(n); });
+  allRules.forEach((r) => { if (r.person && !seen.has(r.person)) { groups.push({ label: r.person, person: r.person }); seen.add(r.person); } });
+  groups.forEach((g) => box.appendChild(prefGroup(g.label, g.person)));
+}
+
+function renderExamples(examples) {
+  const box = $("examples");
+  examples = examples || [];
+  box.innerHTML = "";
+  if (!examples.length) { box.innerHTML = '<p class="empty-state">No past edits yet.</p>'; return; }
+  examples.slice().reverse().slice(0, 12).forEach((ex) => {
+    const el = document.createElement("div");
+    el.className = "example";
+    el.innerHTML =
+      `<div class="ex-name">${escapeHtml(ex.name || "Unknown")} <span class="note" style="font-weight:400">· ${ex.date || ""}</span></div>`
+      + `<div class="ex-label">Before</div><div class="ex-col">${escapeHtml((ex.before || "").slice(0, 300))}</div>`
+      + `<div class="ex-label" style="margin-top:8px">After</div><div class="ex-col ex-after">${escapeHtml((ex.after || "").slice(0, 300))}</div>`;
+    box.appendChild(el);
+  });
+}
+
+async function loadLessons() {
+  try {
+    const d = await (await fetch("/api/lessons")).json();
+    renderRules(d.rules, d.example_count);
+    renderExamples(d.examples);
+  } catch (e) {
+    $("rules").innerHTML = '<p class="empty-state bad-text">Could not load.</p>';
+  }
+}
+async function deleteRule(id) {
+  try {
+    const r = await fetch("/api/lessons/delete", {
+      method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }),
+    });
+    const d = await r.json();
+    if (r.ok) renderRules(d.rules, d.example_count);
+  } catch (e) { /* ignore */ }
+}
+
+function escapeHtml(s) {
+  return (s || "").replace(/[&<>"']/g, (c) =>
+    ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+}
+
+/* ---------------- Connectors (Settings) ---------------- */
 function connGroup(title, items, render) {
   const wrap = document.createElement("div");
   wrap.className = "conn-group";
@@ -485,22 +1495,18 @@ function connGroup(title, items, render) {
   wrap.appendChild(h);
   if (!items.length) {
     const e = document.createElement("div");
-    e.className = "conn-empty";
-    e.textContent = "— nothing pulled —";
+    e.className = "conn-empty"; e.textContent = "— nothing pulled —";
     wrap.appendChild(e);
   } else {
     const ul = document.createElement("ul");
     ul.className = "conn-list";
     items.slice(0, 8).forEach((it) => {
-      const li = document.createElement("li");
-      li.textContent = render(it);
-      ul.appendChild(li);
+      const li = document.createElement("li"); li.textContent = render(it); ul.appendChild(li);
     });
     wrap.appendChild(ul);
   }
   return wrap;
 }
-
 function calendarControl(team, status) {
   const wrap = document.createElement("div");
   wrap.className = "conn-group";
@@ -511,68 +1517,51 @@ function calendarControl(team, status) {
     const line = document.createElement("div");
     line.className = "conn-empty";
     line.style.color = s.ok ? "var(--good)" : "var(--bad)";
-    line.textContent = s.ok ? `✓ ${s.calendar} (${s.count})`
-                            : `✕ ${s.calendar} — ${s.error}`;
+    line.textContent = s.ok ? `✓ ${s.calendar} (${s.count})` : `✕ ${s.calendar} — ${s.error}`;
     wrap.appendChild(line);
   });
   const input = document.createElement("input");
-  input.className = "reason-input";
-  input.style.marginTop = "6px";
-  input.placeholder = "comma-separated emails";
-  input.value = (team || []).join(", ");
+  input.className = "reason-input"; input.style.marginTop = "6px";
+  input.placeholder = "comma-separated emails"; input.value = (team || []).join(", ");
   const save = document.createElement("button");
-  save.textContent = "Save calendars";
+  save.textContent = "Save calendars"; save.style.marginTop = "8px";
   save.addEventListener("click", async () => {
     save.disabled = true; save.textContent = "Saving…";
     try {
       await fetch("/api/connectors/calendars", { method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ emails: input.value }) });
+        headers: { "Content-Type": "application/json" }, body: JSON.stringify({ emails: input.value }) });
     } catch (e) { /* ignore */ }
     loadConnectors();
   });
   const hint = document.createElement("p");
-  hint.className = "note";
-  hint.style.margin = "0";
+  hint.className = "note"; hint.style.margin = "6px 0 0";
   hint.textContent = "Teammates load if their calendar is shared with you or visible org-wide.";
   wrap.append(input, save, hint);
   return wrap;
 }
-
 function driveSelector(d, drives, selected) {
   const wrap = document.createElement("div");
   wrap.className = "conn-group";
   const h = document.createElement("h4");
-  h.textContent = "Drive source";
-  wrap.appendChild(h);
-
-  const sel = document.createElement("select");
-  sel.className = "conn-select";
+  h.textContent = "Drive source"; wrap.appendChild(h);
+  const sel = document.createElement("select"); sel.className = "conn-select";
   const optRecent = document.createElement("option");
-  optRecent.value = "recent";
-  optRecent.textContent = "My Drive (recent files)";
-  sel.appendChild(optRecent);
+  optRecent.value = "recent"; optRecent.textContent = "My Drive (recent files)"; sel.appendChild(optRecent);
   (drives || []).forEach((dr) => {
     const o = document.createElement("option");
-    o.value = "drive:" + dr.id;
-    o.textContent = "Shared Drive: " + dr.name;
-    sel.appendChild(o);
+    o.value = "drive:" + dr.id; o.textContent = "Shared Drive: " + dr.name; sel.appendChild(o);
   });
   if (selected && selected.mode === "drive" && selected.id) sel.value = "drive:" + selected.id;
-
   const folder = document.createElement("input");
-  folder.className = "reason-input";
-  folder.style.marginTop = "0";
+  folder.className = "reason-input"; folder.style.marginTop = "8px";
   folder.placeholder = "…or paste a Drive folder link / ID (e.g. Agilow's shared folder)";
-
   const apply = document.createElement("button");
-  apply.textContent = "Use this Drive";
+  apply.textContent = "Use this Drive"; apply.style.marginTop = "8px";
   apply.addEventListener("click", async () => {
     let body;
     if (folder.value.trim()) body = { mode: "folder", id: folder.value.trim(), name: "Folder" };
     else if (sel.value.startsWith("drive:"))
-      body = { mode: "drive", id: sel.value.slice(6),
-               name: sel.options[sel.selectedIndex].text.replace("Shared Drive: ", "") };
+      body = { mode: "drive", id: sel.value.slice(6), name: sel.options[sel.selectedIndex].text.replace("Shared Drive: ", "") };
     else body = { mode: "recent" };
     apply.disabled = true; apply.textContent = "Applying…";
     try {
@@ -581,22 +1570,18 @@ function driveSelector(d, drives, selected) {
     } catch (e) { /* ignore */ }
     loadConnectors();
   });
-
   const hint = document.createElement("p");
-  hint.className = "note";
-  hint.style.margin = "0";
+  hint.className = "note"; hint.style.margin = "6px 0 0";
   hint.textContent = (drives && drives.length)
     ? "Pick Agilow's Shared Drive, or paste a shared folder link, then Sync."
     : "No Shared Drives found — paste Agilow's shared folder link instead, then Sync.";
-
   wrap.append(sel, folder, apply, hint);
   return wrap;
 }
-
 function renderConnectors(d, drives, selected) {
-  const status = $("connStatus");
-  const body = $("connBody");
+  const status = $("connStatus"); const body = $("connBody");
   body.innerHTML = "";
+  renderConnChips(d);
   if (!d.available) {
     status.textContent = "unavailable";
     body.innerHTML = '<p class="note">Google libraries not installed on the server.</p>';
@@ -609,14 +1594,12 @@ function renderConnectors(d, drives, selected) {
     btn.addEventListener("click", connectGoogle);
     body.appendChild(btn);
     const note = document.createElement("p");
-    note.className = "note";
-    note.style.marginTop = "8px";
+    note.className = "note"; note.style.marginTop = "8px";
     note.textContent = "Opens a Google consent screen in your browser. Read-only access.";
     body.appendChild(note);
     if (d.error) {
       const er = document.createElement("p");
-      er.style.cssText = "color:var(--bad);font-size:13px";
-      er.textContent = d.error;
+      er.style.cssText = "color:var(--bad);font-size:13px"; er.textContent = d.error;
       body.appendChild(er);
     }
     return;
@@ -625,93 +1608,88 @@ function renderConnectors(d, drives, selected) {
   const actions = document.createElement("div");
   actions.className = "conn-actions";
   const sync = document.createElement("button");
-  sync.textContent = "Sync to context";
-  sync.addEventListener("click", syncConnectors);
+  sync.textContent = "Sync to context"; sync.addEventListener("click", syncConnectors);
   const disc = document.createElement("button");
-  disc.className = "secondary";
-  disc.textContent = "Disconnect";
-  disc.addEventListener("click", disconnectGoogle);
+  disc.className = "secondary"; disc.textContent = "Disconnect"; disc.addEventListener("click", disconnectGoogle);
   actions.append(sync, disc);
   body.appendChild(actions);
   const note = document.createElement("p");
-  note.className = "note";
-  note.style.margin = "0";
-  note.textContent = 'This is the live data being pulled. "Sync to context" feeds it into the next Generate.';
+  note.className = "note"; note.style.margin = "0";
+  note.textContent = 'This is the live data being pulled. "Sync to context" feeds it into the next plan.';
   body.appendChild(note);
   body.appendChild(connGroup("Calendar — next 7 days (team)", d.calendar || [],
     (e) => `[${e.who || "?"}] ${(e.start || "").slice(0, 16).replace("T", " ")} · ${e.summary}`));
   body.appendChild(calendarControl(d.team_calendars || [], d.calendars || []));
-  body.appendChild(connGroup("Gmail — recent inbox", d.gmail || [],
-    (m) => `${m.subject}  —  ${m.from}`));
+  body.appendChild(connGroup("Gmail — recent inbox", d.gmail || [], (m) => `${m.subject}  —  ${m.from}`));
   const dlabel = (selected && selected.name) ? selected.name : "My Drive (recent)";
   body.appendChild(connGroup("Drive — " + dlabel, d.drive || [], (f) => f.name));
   body.appendChild(driveSelector(d, drives, selected));
 }
-
 async function loadConnectors() {
   try {
     const d = await (await fetch("/api/connectors")).json();
+    lastConnectors = d;
+    renderConnChips(d);
+    renderRecentChips($("recentChips"));
     let drives = [], selected = d.drive_source || null;
     if (d.connected) {
       try {
         const dr = await (await fetch("/api/connectors/drives")).json();
-        drives = dr.drives || [];
-        selected = dr.selected || selected;
+        drives = dr.drives || []; selected = dr.selected || selected;
       } catch (e) { /* ignore */ }
     }
     renderConnectors(d, drives, selected);
   } catch (e) {
-    $("connBody").textContent = "Could not load connectors.";
+    if ($("connBody")) $("connBody").textContent = "Could not load connectors.";
   }
 }
-
 async function connectGoogle() {
   $("connStatus").textContent = "connecting… (check your browser)";
-  $("connBody").innerHTML =
-    '<p class="note">A Google sign-in should open in your browser — approve access, then this updates.</p>';
+  $("connBody").innerHTML = '<p class="note">A Google sign-in should open in your browser — approve access, then this updates.</p>';
   try {
     const r = await fetch("/api/connectors/connect", { method: "POST" });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Connect failed");
     loadConnectors();
   } catch (e) {
-    renderConnectors({ available: true, connected: false, error: e.message,
-      calendar: [], gmail: [], drive: [] }, [], null);
+    renderConnectors({ available: true, connected: false, error: e.message, calendar: [], gmail: [], drive: [] }, [], null);
   }
 }
-
 async function syncConnectors() {
   try {
     const r = await fetch("/api/connectors/sync", { method: "POST" });
     const d = await r.json();
     if (!r.ok) throw new Error(d.error || "Sync failed");
     const w = d.written || {};
-    $("connStatus").textContent =
-      `synced ✓ (cal ${w.calendar || 0} · mail ${w.gmail || 0} · drive ${w.drive || 0})`;
-  } catch (e) {
-    $("error").textContent = e.message;
-  }
+    $("connStatus").textContent = `synced ✓ (cal ${w.calendar || 0} · mail ${w.gmail || 0} · drive ${w.drive || 0})`;
+    loadConnectors();
+  } catch (e) { if ($("error")) $("error").textContent = e.message; }
 }
-
 async function disconnectGoogle() {
   try {
     const r = await fetch("/api/connectors/disconnect", { method: "POST" });
-    renderConnectors(await r.json());
+    const d = await r.json(); lastConnectors = d;
+    renderConnectors(d, [], null); renderRecentChips($("recentChips"));
   } catch (e) { /* ignore */ }
 }
 
+/* ---------------- Wiring ---------------- */
+$("advancedBtn").addEventListener("click", () => $("advanced").classList.toggle("open"));
+$("backBtn").addEventListener("click", () => showView("new"));
 $("inputMode").addEventListener("change", (e) => {
   $("transcript").placeholder = e.target.value === "draft"
-    ? "Paste the Granola sprint-goals draft here — we'll add North Star / calendar / carry-over goals + your learned fixes on top…"
-    : "Paste your Granola transcript here…";
+    ? "Paste the Granola template's sprint-goals output here — Agilow adds your North Star, calendar, carry-overs and learned fixes on top…"
+    : "Paste your raw Granola transcript here…";
 });
-
 $("generateBtn").addEventListener("click", generate);
 $("learnBtn").addEventListener("click", learn);
 $("copyBtn").addEventListener("click", copyFinal);
 $("downloadBtn").addEventListener("click", downloadFinal);
-loadLessons();
+
+// Initial load: connectors power the chips; lessons populate the preferences cache
+// (used by the live processing trace and per-card "Preferences applied").
 loadConnectors();
+loadLessons();
 </script>
 </body>
 </html>
