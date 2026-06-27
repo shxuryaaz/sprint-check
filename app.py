@@ -28,6 +28,7 @@ from collections import defaultdict
 from flask import Flask, jsonify, render_template, request
 
 import loop1_pipeline as pipeline
+import store  # shared plan storage (Neon/Postgres) for multi-user editing
 
 try:
     import connectors  # Google Calendar/Gmail/Drive (optional — needs google libs)
@@ -467,6 +468,20 @@ def api_generate():
     if process_improvement:
         header += f"\n\nProcess Improvement for the Week: {process_improvement}"
 
+    # Persist as a shared, editable plan with its own id (its URL). The team opens
+    # this id and edits sections concurrently; each section autosaves on its own.
+    user = (data.get("user") or "").strip() or None
+    plan_id = datetime.datetime.now().strftime("%Y%m%d_%H%M%S") + "_" + uuid.uuid4().hex[:6]
+    try:
+        store.save_plan(plan_id, {
+            "sprint_label": sprint_label, "header": header,
+            "process_improvement": process_improvement,
+            "meeting_summary": extraction.get("meeting_summary", ""),
+            "applied": applied,
+        }, sections, by=user)
+    except Exception:  # noqa: BLE001 - never let storage break a generate
+        pass
+
     log_run("generate", {
         "sprint_label": sprint_label,
         "input_mode": input_mode,
@@ -487,6 +502,8 @@ def api_generate():
 
     return jsonify(
         {
+            "plan_id": plan_id,
+            "shared": store.enabled(),
             "sprint_label": sprint_label,
             "header": header,
             "process_improvement": process_improvement,
@@ -815,9 +832,57 @@ def api_lessons():
     )
 
 
+@app.route("/api/plan/<plan_id>", methods=["GET"])
+def api_plan_get(plan_id):
+    """Load a shared plan (latest saved sections) for collaborative editing."""
+    if "/" in plan_id or "\\" in plan_id or ".." in plan_id:
+        return jsonify({"error": "Bad plan id."}), 400
+    if store.enabled():
+        p = store.get_plan(plan_id)
+        if not p:
+            return jsonify({"error": "Plan not found."}), 404
+        header = p.get("header") or f"Sprint goals ({p.get('sprint_label') or 'Sprint Goals'})"
+        return jsonify({
+            "plan_id": plan_id, "shared": True,
+            "sprint_label": p.get("sprint_label"), "header": header,
+            "process_improvement": p.get("process_improvement") or "",
+            "meeting_summary": p.get("meeting_summary") or "",
+            "sections": p.get("sections", []),
+            "applied": p.get("applied") or {},
+        })
+    # No DB configured — fall back to the single-user file-based reopen.
+    return api_plan_detail(plan_id)
+
+
+@app.route("/api/plan/<plan_id>/section", methods=["POST"])
+def api_plan_section(plan_id):
+    """Autosave one person's section. Last-write-wins; different sections never
+    collide. Returns {updated_at, updated_by}."""
+    if "/" in plan_id or "\\" in plan_id or ".." in plan_id:
+        return jsonify({"error": "Bad plan id."}), 400
+    if not store.enabled():
+        return jsonify({"error": "Shared editing isn't configured (no DATABASE_URL)."}), 400
+    data = request.get_json(force=True, silent=True) or {}
+    idx = data.get("idx")
+    if idx is None:
+        return jsonify({"error": "No section idx."}), 400
+    try:
+        res = store.update_section(
+            plan_id, int(idx), (data.get("name") or "").strip(),
+            data.get("text") or "", (data.get("user") or "").strip() or None)
+    except (ValueError, TypeError):
+        return jsonify({"error": "Bad section idx."}), 400
+    if res is None:
+        return jsonify({"error": "Plan not found."}), 404
+    return jsonify(res)
+
+
 @app.route("/api/plans", methods=["GET"])
 def api_plans():
-    """List past generated plans (newest first) from the run logs — the Plans page."""
+    """List past generated plans (newest first) — from the DB when shared editing
+    is configured, otherwise from the local run logs."""
+    if store.enabled():
+        return jsonify({"plans": store.list_plans()})
     plans = []
     if os.path.isdir(RUNS_DIR):
         for fn in sorted(os.listdir(RUNS_DIR), reverse=True):
@@ -1040,6 +1105,7 @@ if __name__ == "__main__":
     except RuntimeError as e:
         print(f"ERROR: {e}", file=sys.stderr)
         sys.exit(1)
+    store.init_db()  # create tables if DATABASE_URL is set (no-op otherwise)
     # debug enables auto-reload: edits to app.py / templates / the pipeline take
     # effect without manually restarting the server. Defaults on for local dev,
     # but MUST be off when the app is exposed via a public tunnel/deploy — the

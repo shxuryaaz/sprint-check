@@ -477,6 +477,7 @@
           <div class="result-actions" id="actions">
             <button id="learnBtn">✓ Approve &amp; Learn</button>
             <button id="copyBtn" class="secondary">Copy for Google Doc</button>
+            <button id="shareBtn" class="secondary" style="display:none">🔗 Share link</button>
             <button id="downloadBtn" class="secondary">Download</button>
           </div>
         </div>
@@ -549,6 +550,42 @@ const $ = (id) => document.getElementById(id);
 let lastMeetingSummary = "";
 let lastConnectors = null;
 let lastApplied = {};   // the trace from the most recent generation (examples/context)
+
+/* ---------------- Shared multi-user plan state ---------------- */
+let currentPlanId = null;     // the open plan's id (its shareable URL)
+let planShared = false;       // true when the server has a DB (collaborative)
+let pollTimer = null;
+let userName = localStorage.getItem("agilow_user") || "";
+function ensureUser() {
+  if (!userName) {
+    const n = (prompt("Your name (so teammates see who's editing):") || "").trim();
+    userName = n || "Someone";
+    localStorage.setItem("agilow_user", userName);
+  }
+  return userName;
+}
+function setPlanUrl(id) {
+  const u = new URL(window.location);
+  u.searchParams.set("plan", id);
+  history.replaceState(null, "", u);
+  const sb = $("shareBtn");
+  if (sb) sb.style.display = planShared ? "" : "none";
+}
+function startPolling() { stopPolling(); pollTimer = setInterval(pollPlan, 5000); }
+function stopPolling() { if (pollTimer) { clearInterval(pollTimer); pollTimer = null; } }
+// Silently pull teammates' saved edits into sections you're NOT editing.
+async function pollPlan() {
+  if (!currentPlanId || !planShared || document.hidden) return;
+  try {
+    const d = await (await fetch("/api/plan/" + encodeURIComponent(currentPlanId))).json();
+    if (!d || !d.sections) return;
+    const cards = [...document.querySelectorAll("#sections .card")];
+    d.sections.forEach((s) => {
+      const card = cards.find((c) => String(c.dataset.idx) === String(s.idx));
+      if (card && card._applyRemote) card._applyRemote(s.text);
+    });
+  } catch (e) { /* transient — try again next tick */ }
+}
 
 /* ---------------- View routing ---------------- */
 const viewLoaders = {
@@ -842,10 +879,11 @@ function renderRecentChips(box) {
 }
 
 /* ---------------- Generate ---------------- */
-function makeCard(section) {
+function makeCard(section, idx) {
   const card = document.createElement("div");
   card.className = "card";
   card.dataset.name = section.name;
+  card.dataset.idx = idx;
   card.dataset.original = section.text;
   card.dataset.status = "approved";
 
@@ -886,21 +924,50 @@ function makeCard(section) {
   ta.value = normalized;
   card.dataset.original = normalized;        // diff inline edits against this baseline
 
-  function commit() { ta.value = serializeModel(model); refreshStatus(); }
+  let saveTimer = null;
+  function scheduleAutosave() {
+    if (!planShared || !currentPlanId) return;
+    clearTimeout(saveTimer);
+    saveTimer = setTimeout(saveSection, 800);   // debounce while typing
+  }
+  async function saveSection() {
+    if (!planShared || !currentPlanId) return;
+    try {
+      await fetch("/api/plan/" + encodeURIComponent(currentPlanId) + "/section", {
+        method: "POST", headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ idx, name: card.dataset.name, text: ta.value, user: ensureUser() }),
+      });
+    } catch (e) { /* keep local edits; retry on next change */ }
+  }
+  function commit() { ta.value = serializeModel(model); refreshStatus(); scheduleAutosave(); }
   function renderModel() { renderEditableSection(model, preview, commit); }
   renderModel();
+
+  // Apply a teammate's saved version of THIS section — unless you're editing it.
+  card._applyRemote = (text) => {
+    if (card._editing) return;
+    if ((text || "") === ta.value) return;
+    model = parseSection(text || "");
+    ta.value = serializeModel(model);
+    card.dataset.original = ta.value;   // remote becomes the new baseline (no false "edited")
+    renderModel();
+    refreshStatus();
+  };
 
   const editHint = document.createElement("div");
   editHint.className = "gp-edit-hint";
   editHint.textContent = "Tip: click any line to edit it. Hover a goal or bullet for ✕ to remove.";
 
   // Editing a long, clamped card auto-expands it so nothing is hidden mid-edit.
+  // _editing guards this card from being overwritten by a teammate's polled save.
   preview.addEventListener("focusin", () => {
+    card._editing = true;
     if (preview.classList.contains("clamped")) {
       preview.classList.remove("clamped"); card.classList.remove("collapsed");
       expandBtn.style.display = "none";
     }
   });
+  preview.addEventListener("focusout", () => { setTimeout(() => { card._editing = false; }, 1200); });
 
   // Buttons under the goals: Edit raw text (escape hatch), Show full (expand clamp).
   const viewBar = document.createElement("div");
@@ -946,7 +1013,9 @@ function makeCard(section) {
     card.dataset.status = edited ? "edited" : "approved";
     tag.textContent = edited ? "edited" : "";
   }
-  ta.addEventListener("input", () => { refreshStatus(); autosize(ta); });
+  ta.addEventListener("focus", () => { card._editing = true; });
+  ta.addEventListener("blur", () => { setTimeout(() => { card._editing = false; }, 1200); });
+  ta.addEventListener("input", () => { refreshStatus(); autosize(ta); scheduleAutosave(); });
 
   approveBtn.addEventListener("click", () => {
     card.classList.remove("rejected");
@@ -1025,7 +1094,7 @@ function makeCard(section) {
       ta.value = (data.section || "").trim();
       ta.classList.remove("clamped"); card.classList.remove("collapsed");
       model = parseSection(ta.value); renderModel();   // reflect the change in the styled view
-      refreshStatus(); autosize(ta);
+      refreshStatus(); autosize(ta); scheduleAutosave();
       if (ta.style.display === "none") applyClamp();   // re-clamp preview when not editing
       changeReasoning.textContent = (data.reasoning || "");
       changeReasoning.style.display = "";
@@ -1189,6 +1258,13 @@ function legacyCopyHtml(html) {
 function renderSections(d) {
   lastMeetingSummary = d.meeting_summary || "";
   lastApplied = d.applied || {};
+  // Adopt this plan as the shared, editable doc (its id is the shareable URL).
+  if (d.plan_id) {
+    currentPlanId = d.plan_id;
+    planShared = !!d.shared;
+    setPlanUrl(currentPlanId);
+    if (planShared) startPolling(); else stopPolling();
+  }
   $("resultTitle").textContent = (d.header || "Sprint goals").split("\n")[0];
   $("summary").textContent = d.meeting_summary || "";
   $("process").textContent = d.process_improvement ? "Process improvement (team): " + d.process_improvement : "";
@@ -1199,7 +1275,7 @@ function renderSections(d) {
     $("actions").style.display = "none";
     return;
   }
-  d.sections.forEach((s) => $("sections").appendChild(makeCard(s)));
+  d.sections.forEach((s, i) => $("sections").appendChild(makeCard(s, s.idx != null ? s.idx : i)));
   $("actions").style.display = "flex";
 }
 
@@ -1341,9 +1417,9 @@ async function loadPlans() {
 }
 async function openPlan(id) {
   try {
-    const d = await (await fetch("/api/plans/" + encodeURIComponent(id))).json();
+    const d = await (await fetch("/api/plan/" + encodeURIComponent(id))).json();
     if (d.error) throw new Error(d.error);
-    $("appliedNote").textContent = d.date ? `Reopened from ${d.date}` : "";
+    $("appliedNote").textContent = d.shared ? "Shared plan — your edits save for everyone." : (d.date ? `Reopened from ${d.date}` : "");
     $("error").textContent = "";
     renderSections(d);
     showView("result");
@@ -1675,7 +1751,14 @@ async function disconnectGoogle() {
 
 /* ---------------- Wiring ---------------- */
 $("advancedBtn").addEventListener("click", () => $("advanced").classList.toggle("open"));
-$("backBtn").addEventListener("click", () => showView("new"));
+$("backBtn").addEventListener("click", () => { stopPolling(); showView("new"); });
+$("shareBtn").addEventListener("click", () => {
+  const url = window.location.href;
+  const ok = () => { $("shareBtn").textContent = "Link copied ✓"; setTimeout(() => ($("shareBtn").textContent = "🔗 Share link"), 1500); };
+  if (navigator.clipboard && navigator.clipboard.writeText) {
+    navigator.clipboard.writeText(url).then(ok).catch(() => prompt("Copy this link:", url));
+  } else { prompt("Copy this link to share:", url); }
+});
 $("inputMode").addEventListener("change", (e) => {
   $("transcript").placeholder = e.target.value === "draft"
     ? "Paste the Granola template's sprint-goals output here — Agilow adds your North Star, calendar, carry-overs and learned fixes on top…"
@@ -1690,6 +1773,11 @@ $("downloadBtn").addEventListener("click", downloadFinal);
 // (used by the live processing trace and per-card "Preferences applied").
 loadConnectors();
 loadLessons();
+// Deep-link: opening ?plan=<id> jumps straight into that shared plan.
+(() => {
+  const pid = new URLSearchParams(location.search).get("plan");
+  if (pid) openPlan(pid);
+})();
 </script>
 </body>
 </html>

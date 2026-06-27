@@ -10,6 +10,8 @@ services:
     healthCheckPath: /ping
     envVars:
       - key: OPENAI_API_KEY
-        sync: false          # set this in the Render dashboard (secret)
+        sync: false          # set in the Render dashboard (secret)
+      - key: DATABASE_URL
+        sync: false          # Neon connection string — set in the dashboard (secret)
       - key: PYTHON_VERSION
         value: "3.11.9"
